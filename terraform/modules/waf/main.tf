@@ -10,6 +10,16 @@ locals {
   name_prefix = "${var.project_name}-${var.environment}"
 }
 
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      # 버전은 루트 모듈과 맞추는 것이 좋습니다.
+      version = "~> 5.0" 
+    }
+  }
+}
+
 resource "aws_wafv2_web_acl" "main" {
   name        = "${var.project_name}-waf"
   description = "Advanced Managed Rules for CloudFront with DDoS & Bot Protection"
@@ -23,7 +33,9 @@ resource "aws_wafv2_web_acl" "main" {
   rule {
     name     = "AWS-AWSManagedRulesAntiDDoSRuleSet"
     priority = 0
-    override_action { none {} }
+    override_action {
+      none {} 
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesAntiDDoSRuleSet"
@@ -41,7 +53,9 @@ resource "aws_wafv2_web_acl" "main" {
   rule {
     name     = "AWS-AWSManagedRulesAmazonIpReputationList"
     priority = 1
-    override_action { none {} }
+    override_action {
+      none {} 
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesAmazonIpReputationList"
@@ -59,7 +73,10 @@ resource "aws_wafv2_web_acl" "main" {
   rule {
     name     = "AWS-AWSManagedRulesAnonymousIpList"
     priority = 2
-    override_action { none {} }
+    override_action {
+      none {}  
+    }
+       
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesAnonymousIpList"
@@ -77,7 +94,9 @@ resource "aws_wafv2_web_acl" "main" {
   rule {
     name     = "AWS-AWSManagedRulesCommonRuleSet"
     priority = 3
-    override_action { none {} }
+    override_action {
+      none {} 
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesCommonRuleSet"
@@ -95,7 +114,9 @@ resource "aws_wafv2_web_acl" "main" {
   rule {
     name     = "AWS-AWSManagedRulesBotControlRuleSet"
     priority = 4
-    override_action { none {} }
+    override_action {
+      none {} 
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesBotControlRuleSet"
@@ -133,7 +154,9 @@ resource "aws_wafv2_web_acl" "main" {
   rule {
     name     = "AWS-AWSManagedRulesLinuxRuleSet"
     priority = 6
-    override_action { none {} }
+    override_action {
+      none {} 
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesLinuxRuleSet"
@@ -151,7 +174,9 @@ resource "aws_wafv2_web_acl" "main" {
   rule {
     name     = "AWS-AWSManagedRulesUnixRuleSet"
     priority = 7
-    override_action { none {} }
+    override_action {
+      none {} 
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesUnixRuleSet"

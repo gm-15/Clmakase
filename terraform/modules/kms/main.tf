@@ -55,5 +55,12 @@ data "aws_iam_policy_document" "kms_policy" {
       "kms:Decrypt"
     ]
     resources = ["*"]
+
+    # 이 부분이 핵심입니다! 특정 계정의 자원만 허용
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
   }
 }

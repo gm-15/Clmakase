@@ -2,22 +2,12 @@
 # ACM Module - Variables
 ################################################################################
 
-variable "project_name" {
-  description = "프로젝트 이름"
-  type        = string
-}
+variable "project_name" { type = string }
+variable "domain_name"  { type = string }
+variable "common_tags"  { type = map(string) }
 
-variable "domain_name" {
-  description = "도메인 이름 (예: clmakase.click)"
-  type        = string
-}
-
+# 검증 레코드를 만들지 않으므로 아래 변수는 모듈 내에서 사용되지 않습니다.
 variable "route53_zone_id" {
-  description = "Route53 Hosted Zone ID (DNS 검증용)"
-  type        = string
-}
-
-variable "common_tags" {
-  description = "공통 태그"
-  type        = map(string)
+  type    = string
+  default = ""
 }
