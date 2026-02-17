@@ -72,15 +72,21 @@ output "rds_database_name" {
   value       = module.rds.database_name
 }
 
+# --- KMS ---
+output "rds_kms_key_arn" {
+  description = "RDS/Secrets Manager용 KMS 키 ARN"
+  value       = module.kms.rds_key_arn
+}
+
 # --- ASM (Secrets Manager) ---
 output "rds_secret_arn" {
   description = "Secrets Manager ARN (DB 비밀번호)"
-  value       = module.rds.db_secret_arn
+  value       = module.secrets.secret_arn
 }
 
 output "rds_secret_name" {
   description = "Secrets Manager Name (DB 비밀번호)"
-  value       = module.rds.db_secret_name
+  value       = module.secrets.secret_name
 }
 
 # --- WAF ---
@@ -95,14 +101,14 @@ output "waf_web_acl_id" {
 }
 
 # --- KMS ---
-output "kms_key_arn" {
+output "s3_kms_key_arn" {
   description = "KMS 키 ARN (S3 암호화용)"
-  value       = module.kms.key_arn
+  value       = module.kms.s3_key_arn
 }
 
 output "kms_key_id" {
   description = "KMS 키 ID"
-  value       = module.kms.key_id
+  value       = module.kms.s3_key_id
 }
 
 # --- S3 ---

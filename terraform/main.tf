@@ -106,12 +106,17 @@ module "rds" {
   project_name       = var.project_name
   environment        = var.environment
   private_subnet_ids = module.vpc.private_subnet_ids
+  db_password = module.secrets.db_password
   rds_sg_id          = module.security_groups.rds_sg_id
   database_name      = "oliveyoung"
   master_username    = "admin"
   # master_password는 random_password로 자동 생성 → ASM에 보관
   instance_class     = "db.t3.medium"
   common_tags        = local.common_tags
+}
+resource "aws_secretsmanager_secret" "db_secret" {
+  name       = "${var.project_name}/db-password"
+  kms_key_id = module.kms.rds_key_arn # <--- RDS 키 사용
 }
 
 # ------------------------------------------------------------------------------
@@ -141,6 +146,22 @@ module "kms" {
 }
 
 # ------------------------------------------------------------------------------
+# 비밀번호 관리 (Secrets Manager)
+# ------------------------------------------------------------------------------
+module "secrets" {
+  source          = "./modules/secrets"
+  project_name    = var.project_name
+  environment     = var.environment
+  # [변경 포인트]: RDS 전용 KMS 키를 사용하여 보안성 강화
+  kms_key_arn     = module.kms.rds_key_arn 
+  master_username = var.master_username
+  database_name   = var.database_name
+  # [변경 포인트]: RDS 엔드포인트를 실시간으로 받아서 Secret 값에 포함
+  db_host         = module.rds.cluster_endpoint 
+  common_tags     = local.common_tags
+}
+
+# ------------------------------------------------------------------------------
 # S3 Module (정적 자산 버킷 - CloudFront 오리진, KMS 암호화)
 # ------------------------------------------------------------------------------
 module "s3" {
@@ -148,7 +169,7 @@ module "s3" {
 
   project_name = var.project_name
   environment  = var.environment
-  kms_key_arn  = module.kms.key_arn
+  kms_key_arn  = module.kms.s3_key_arn
   common_tags  = local.common_tags
 }
 

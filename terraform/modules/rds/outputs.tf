@@ -26,14 +26,3 @@ output "cluster_identifier" {
   description = "Aurora cluster identifier"
   value       = aws_rds_cluster.this.cluster_identifier
 }
-
-# --- ASM (Secrets Manager) ---
-output "db_secret_arn" {
-  description = "The ARN of the Secrets Manager secret"
-  value       = aws_secretsmanager_secret.db_secret.arn
-}
-
-output "db_secret_name" {
-  description = "The Name of the Secrets Manager secret"
-  value       = aws_secretsmanager_secret.db_secret.name
-}

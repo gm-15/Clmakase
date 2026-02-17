@@ -65,3 +65,15 @@ variable "domain_name" {
   type        = string
   default     = "clmakase.click"
 }
+
+variable "master_username" {
+  description = "RDS 마스터 사용자 이름"
+  type        = string
+  default     = "admin"
+}
+
+variable "database_name" {
+  description = "생성할 데이터베이스 이름"
+  type        = string
+  default     = "oliveyoung"
+}

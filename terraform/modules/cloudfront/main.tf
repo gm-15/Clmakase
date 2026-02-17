@@ -19,8 +19,8 @@ resource "aws_cloudfront_distribution" "this" {
   comment             = "CDN for ${var.project_name}"
   default_root_object = "index.html"
 
-  # [연결 1] 커스텀 도메인 (clmakase.click, www.clmakase.click)
-  aliases = var.domain_name != "" ? [var.domain_name, "www.${var.domain_name}"] : []
+  # [연결 1] 커스텀 도메인 (clmakase.click)
+  aliases = var.domain_name != "" ? [var.domain_name] : []
 
   # [연결 2] WAF 결합
   web_acl_id = var.waf_acl_id
