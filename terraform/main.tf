@@ -32,6 +32,16 @@ provider "aws" {
     }
   }
 }
+# 서울 리전 명시적 프로바이더
+# module "acm_alb"에서 providers = { aws = aws.seoul }로 호출할 때 사용됩니다.
+provider "aws" {
+  alias  = "seoul"
+  region = "ap-northeast-2" # 서울 리전 고정
+
+  default_tags {
+    tags = local.common_tags
+  }
+}
 
 # CloudFront WAF는 us-east-1에서만 생성 가능
 provider "aws" {
@@ -117,6 +127,8 @@ module "rds" {
 resource "aws_secretsmanager_secret" "db_secret" {
   name       = "${var.project_name}/db-password"
   kms_key_id = module.kms.rds_key_arn # <--- RDS 키 사용
+  # 대기시간 없이 삭제
+  recovery_window_in_days = 0
 }
 
 # ------------------------------------------------------------------------------
@@ -188,12 +200,27 @@ module "route53" {
 # ------------------------------------------------------------------------------
 # [Step 2] ACM Module (SSL 인증서 - us-east-1, CloudFront 필수)
 # → Route53 zone_id로 DNS 자동 검증
+# + ALB 용 인증서 (서울 리전 등 서비스 리전)
 # ------------------------------------------------------------------------------
-module "acm" {
+# 1. Cloudfront 인증서 (반드시 us-east-1)
+module "acm_cloudfront" {
   source = "./modules/acm"
 
   providers = {
     aws = aws.us_east_1
+  }
+
+  project_name    = var.project_name
+  domain_name     = var.domain_name
+  route53_zone_id = module.route53.zone_id
+  common_tags     = local.common_tags
+}
+# 2. ALB용 인증서 (서울 리전 등 서비스 리전)
+module "acm_alb" {
+  source = "./modules/acm"
+
+  providers = {
+    aws = aws.seoul  # 혹은 기본 aws 프로바이더
   }
 
   project_name    = var.project_name
@@ -213,7 +240,7 @@ module "cloudfront" {
   s3_bucket_domain_name = module.s3.bucket_regional_domain_name
   waf_acl_id            = module.waf.web_acl_arn
   domain_name           = var.domain_name
-  acm_certificate_arn   = module.acm.certificate_arn
+  acm_certificate_arn   = module.acm_cloudfront.certificate_arn
 }
 
 # ------------------------------------------------------------------------------

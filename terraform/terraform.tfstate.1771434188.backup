@@ -1,0 +1,68 @@
+{
+  "version": 4,
+  "terraform_version": "1.14.5",
+  "serial": 181,
+  "lineage": "28aa63f2-1257-ff0f-7784-f200bb04ab2b",
+  "outputs": {},
+  "resources": [
+    {
+      "module": "module.route53",
+      "mode": "managed",
+      "type": "aws_route53_zone",
+      "name": "this",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:route53:::hostedzone/Z09258691VHWJXLDCDX1O",
+            "comment": "HostedZone created by Route53 Registrar",
+            "delegation_set_id": "",
+            "force_destroy": false,
+            "id": "Z09258691VHWJXLDCDX1O",
+            "name": "clmakase.click",
+            "name_servers": [
+              "ns-1491.awsdns-58.org",
+              "ns-1960.awsdns-53.co.uk",
+              "ns-407.awsdns-50.com",
+              "ns-615.awsdns-12.net"
+            ],
+            "primary_name_server": "ns-1960.awsdns-53.co.uk",
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "cloudwave-zone",
+              "Project": "cloudwave"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "cloudwave-zone",
+              "Project": "cloudwave"
+            },
+            "timeouts": null,
+            "vpc": [],
+            "zone_id": "Z09258691VHWJXLDCDX1O"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAwLCJkZWxldGUiOjE4MDAwMDAwMDAwMDAsInVwZGF0ZSI6MTgwMDAwMDAwMDAwMH19"
+        }
+      ]
+    }
+  ],
+  "check_results": [
+    {
+      "object_kind": "var",
+      "config_addr": "module.waf.var.project_name",
+      "status": "unknown",
+      "objects": null
+    },
+    {
+      "object_kind": "var",
+      "config_addr": "module.waf.var.environment",
+      "status": "unknown",
+      "objects": null
+    }
+  ]
+}

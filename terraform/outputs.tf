@@ -150,9 +150,13 @@ output "route53_name_servers" {
 }
 
 # --- ACM ---
-output "acm_certificate_arn" {
+output "acm_certificate_arn_cloudfront" {
   description = "ACM SSL 인증서 ARN (us-east-1)"
-  value       = module.acm.certificate_arn
+  value       = module.acm_cloudfront.certificate_arn
+}
+output "acm_certificate_arn_alb" {
+  description = "ALB용 ACM 인증서 ARN (ap-northeast-2)"
+  value       = module.acm_alb.certificate_arn
 }
 
 # --- EKS 콘솔 생성 시 필요한 정보 요약 ---
