@@ -29,7 +29,9 @@
       "Bash(docker run:*)",
       "Bash(MSYS_NO_PATHCONV=1 docker run:*)",
       "Bash(dir \"C:\\\\Users\\\\KDT49\\\\Clmakase\\\\terraform\\\\modules\")",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git show:*)",
+      "Bash(ALB_ARN=\"arn:aws:elasticloadbalancing:ap-northeast-2:160884802838:loadbalancer/app/k8s-oliveyou-oliveyou-a886c5cbad/1c83ca069840aefa\":*)"
     ]
   }
 }

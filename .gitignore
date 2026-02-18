@@ -1,27 +1,47 @@
 # Terraform
-terraform/.terraform/
-terraform/terraform.tfstate
-terraform/terraform.tfstate.backup
+**/.terraform/
+*.tfstate
+*.tfstate.backup
 *.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Java / Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+*.jar
+*.class
+*.war
+*.ear
+out/
+
+# Node
+node_modules/
+dist/
+
+# Env / Secrets
+.env
+.env.*
+*.pem
+*.key
 
 # IDE
 .idea/
 .vscode/
 *.swp
+*.iml
 
 # OS
 .DS_Store
-nul
 Thumbs.db
+nul
 
-# Node
-node_modules/
+# Claude Code
+.claude/settings.local.json
 
-# Java
-build/
-*.jar
-*.class
-
-# Env
-.env
-*.pem
+# Docker
+*.log
