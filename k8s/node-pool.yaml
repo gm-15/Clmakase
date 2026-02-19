@@ -1,0 +1,21 @@
+apiVersion: karpenter.sh/v1beta1
+kind: NodePool
+metadata:
+  name: default
+spec:
+  template:
+    spec:
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          # values: ["amd64"] 대신 "arm64"를 추가합니다.
+          values: ["arm64", "amd64"] # 둘 다 쓰거나 그래비톤만 쓰고 싶으면 ["arm64"]만!
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          # 그래비톤 인스턴스 패밀리인 g를 포함시킵니다 (예: c7g, m7g 등)
+          values: ["c", "m", "r", "g"] 
+      nodeClassRef:
+        name: default
