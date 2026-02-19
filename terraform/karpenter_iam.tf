@@ -31,6 +31,30 @@ resource "aws_iam_policy" "karpenter_controller" {
   })
 }
 
+# 카펜터 노드 역할(Node Role)에 추가할 KMS 사용 권한 예시
+resource "aws_iam_role_policy" "karpenter_node_kms" {
+  name = "KarpenterNodeKMS"
+  role = "cloudwave-eks-karpenter-node-role" # 노드용 역할 이름과 일치시키세요
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:CreateGrant", # EC2가 볼륨을 붙일 때 반드시 필요
+          "kms:DescribeKey"
+        ]
+        Resource = "*" # alias/aws/ebs 키를 포함한 KMS 리소스 허용
+      }
+    ]
+  })
+}
+
 # 2. 신뢰 관계 설정 (가져오신 코드)
 data "aws_iam_policy_document" "karpenter_assume_role_policy" {
   statement {

@@ -5,6 +5,18 @@ metadata:
 spec:
   amiFamily: AL2023 # 최신 보안 및 그래비톤 최적화를 위해 추천
   # [핵심] 테라폼에서 넣은 태그로 찾습니다.
+
+  # [1] EBS 볼륨 암호화 및 성능 설정 추가
+  blockDeviceMappings:
+    - deviceName: /dev/xvda # AL2023의 기본 루트 디바이스 이름
+      ebs:
+        volumeSize: 50Gi     # 대규모 트래픽 시 로그 및 임시 데이터 저장을 위해 50Gi 권장
+        volumeType: gp3      # 가성비와 성능이 가장 좋은 최신 볼륨 타입
+        encrypted: true      # [보안] 물리적 디스크 탈취 시 데이터 읽기 불가능
+        kmsKeyId: alias/aws/ebs # AWS 관리형 키 사용 (별도 키가 있다면 ARN 입력 가능)
+        deleteOnTermination: true # 노드 삭제 시 볼륨도 함께 삭제하여 비용 절감
+        
+  # [2] 네트워크 및 태그 설정  
   subnetSelectorTerms:
     - tags:
         karpenter.sh/discovery: "cloudwave-eks"

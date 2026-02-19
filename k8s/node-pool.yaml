@@ -1,21 +1,33 @@
 apiVersion: karpenter.sh/v1beta1
 kind: NodePool
 metadata:
-  name: default
+  name: security-optimized-pool
 spec:
   template:
     spec:
       requirements:
         - key: kubernetes.io/arch
           operator: In
-          # values: ["amd64"] 대신 "arm64"를 추가합니다.
-          values: ["arm64", "amd64"] # 둘 다 쓰거나 그래비톤만 쓰고 싶으면 ["arm64"]만!
+          # [보안/성능] 그래비톤(arm64)을 우선하되, 
+          # 이미지 호환성 문제로 배포 실패를 방지하기 위해 amd64를 백업으로 유지합니다.
+          values: ["arm64", "amd64"]
         - key: karpenter.sh/capacity-type
           operator: In
-          values: ["spot", "on-demand"]
+          # [안정성] 대규모 트래픽 시 스팟 중단(Interruption)을 방지하기 위해 
+          # 온디맨드 비중을 높이거나 전략적으로 선택합니다.
+          values: ["on-demand", "spot"]
         - key: karpenter.k8s.aws/instance-category
           operator: In
-          # 그래비톤 인스턴스 패밀리인 g를 포함시킵니다 (예: c7g, m7g 등)
-          values: ["c", "m", "r", "g"] 
+          # [보안/성능] 그래비톤 4(r8g)와 고성능 인스턴스 위주로 구성
+          values: ["c", "m", "r"] 
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          # [보안] 최신 하드웨어 암호화 기능(Graviton 3, 4)을 위해 6세대 이상만 사용
+          values: ["6"]
       nodeClassRef:
         name: default
+  disruption:
+    # [가용성] 대규모 트래픽 중 노드가 갑자기 삭제되는 것을 방지
+    consolidationPolicy: WhenUnderutilized
+    consolidateAfter: 30s
+    expireAfter: 720h # 30일마다 노드 교체 (보안 패치 및 신선도 유지)
