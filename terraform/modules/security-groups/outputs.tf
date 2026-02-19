@@ -26,3 +26,13 @@ output "redis_sg_id" {
   description = "Redis security group ID"
   value       = aws_security_group.redis.id
 }
+
+output "bastion_cli_sg_id" {
+  description = "Bastion CLI server security group ID"
+  value       = aws_security_group.bastion_cli.id
+}
+
+output "bastion_vpce_sg_id" {
+  description = "Bastion VPC Endpoint security group ID"
+  value       = aws_security_group.bastion_vpce.id
+}

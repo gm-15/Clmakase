@@ -423,5 +423,7 @@ module "bastion" {
   project_name = var.project_name
   environment  = var.environment
   aws_region   = var.aws_region
+  cli_sg_id    = module.security_groups.bastion_cli_sg_id
+  vpce_sg_id   = module.security_groups.bastion_vpce_sg_id
   common_tags  = local.common_tags
 }

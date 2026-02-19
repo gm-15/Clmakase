@@ -68,7 +68,7 @@ resource "aws_vpc_endpoint" "ssm_endpoints" {
   service_name        = "com.amazonaws.${var.aws_region}.${each.value}"
   vpc_endpoint_type   = "Interface"
   subnet_ids          = [aws_subnet.cli_private_subnet.id]
-  security_group_ids  = [aws_security_group.vpce_sg.id]
+  security_group_ids  = [var.vpce_sg_id]
   private_dns_enabled = true
 }
 
@@ -77,62 +77,8 @@ resource "aws_instance" "cli_server" {
   ami                    = var.ami_id
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.cli_private_subnet.id
-  vpc_security_group_ids = [aws_security_group.cli_sg.id]
+  vpc_security_group_ids = [var.cli_sg_id]
   iam_instance_profile   = aws_iam_instance_profile.cli_profile.name
 
   tags = { Name = "${local.name_prefix}-private-cli-server" }
-}
-
-# 8. CLI 서버 보안 그룹
-resource "aws_security_group" "cli_sg" {
-  name        = "${local.name_prefix}-cli-server-sg"
-  description = "Security group for CLI Server"
-  vpc_id      = var.vpc_id
-
-  # [아웃바운드]
-  # 1. SSM Endpoint(443)로 접속하기 위해 필요
-  # 2. RDS(3306)로 접속하기 위해 필요
-  # 3. S3 패키지 다운로드를 위해 필요
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = { Name = "${local.name_prefix}-cli-sg" }
-}
-
-# 9. VPC Endpoint 보안 그룹 (인터페이스형: ssm, ssmmessages, ec2messages 공용)
-resource "aws_security_group" "vpce_sg" {
-  name        = "${local.name_prefix}-vpc-endpoint-sg"
-  description = "Allow CLI server to access SSM Endpoints"
-  vpc_id      = var.vpc_id
-
-  # [인바운드] CLI 서버 SG에서 오는 HTTPS(443) 요청만 허용
-  ingress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.cli_sg.id]
-  }
-
-  tags = { Name = "${local.name_prefix}-vpce-sg" }
-}
-
-# 10. RDS 보안 그룹
-resource "aws_security_group" "rds_sg" {
-  name        = "${local.name_prefix}-bastion-rds-sg"
-  description = "Allow CLI server to access RDS"
-  vpc_id      = var.vpc_id
-
-  # [인바운드] CLI 서버 SG에서 오는 DB 포트(예: 3306) 요청만 허용
-  ingress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.cli_sg.id]
-  }
-
-  tags = { Name = "${local.name_prefix}-bastion-rds-sg" }
 }

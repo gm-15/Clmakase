@@ -16,13 +16,3 @@ output "subnet_id" {
   description = "CLI server private subnet ID"
   value       = aws_subnet.cli_private_subnet.id
 }
-
-output "cli_sg_id" {
-  description = "CLI server security group ID"
-  value       = aws_security_group.cli_sg.id
-}
-
-output "rds_sg_id" {
-  description = "RDS security group ID (allows CLI server access)"
-  value       = aws_security_group.rds_sg.id
-}

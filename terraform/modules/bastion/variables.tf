@@ -47,6 +47,16 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "cli_sg_id" {
+  description = "Security group ID for CLI server"
+  type        = string
+}
+
+variable "vpce_sg_id" {
+  description = "Security group ID for VPC Endpoints"
+  type        = string
+}
+
 variable "common_tags" {
   description = "Common tags for all resources"
   type        = map(string)
