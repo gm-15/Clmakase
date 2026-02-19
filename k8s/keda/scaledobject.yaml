@@ -1,0 +1,99 @@
+################################################################################
+# KEDA ScaledObject - oliveyoung-api 통합 오토스케일링
+#
+# Scaler 구성:
+#   1. Kafka  - Consumer Lag 기반 Scale Out/In
+#   2. Redis  - 대기열(List) 길이 기반 Scale Out/In
+#   3. Datadog - RPS 기반 Scale Out/In
+#
+# 동작 방식:
+#   - 3개 트리거 중 가장 높은 값을 기준으로 replicas 결정
+#   - KEDA가 내부적으로 HPA를 생성하여 관리
+################################################################################
+
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: oliveyoung-api-scaledobject
+  namespace: oliveyoung
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: oliveyoung-api               # deployment.yaml의 name과 일치
+
+  # 스케일링 범위
+  minReplicaCount: 1                   # 항상 최소 1개 유지 (세일 시스템 특성상 0 비권장)
+  maxReplicaCount: 20                  # 노드 리소스 한도 내 최대 Pod 수
+
+  # 폴링 및 쿨다운
+  pollingInterval: 15                  # 15초마다 메트릭 수집
+  cooldownPeriod: 120                  # 스케일 인 전 대기시간(초) - 너무 짧으면 thrashing 발생
+
+  # Scale In/Out 속도 제어 (급격한 변동 방지)
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 30    # 스케일 아웃: 30초 동안 안정적으로 높으면 실행
+          policies:
+            - type: Pods
+              value: 4                      # 한 번에 최대 4개 Pod 추가
+              periodSeconds: 30
+        scaleDown:
+          stabilizationWindowSeconds: 180   # 스케일 인: 3분 동안 안정적으로 낮아야 실행
+          policies:
+            - type: Pods
+              value: 2                      # 한 번에 최대 2개 Pod 제거 (급격한 감소 방지)
+              periodSeconds: 60
+
+  triggers:
+
+    ############################################################################
+    # 1. Kafka Scaler - Consumer Lag 기반
+    #    계산식: ceil(totalLag / lagThreshold) = 필요 Pod 수
+    #    예시: lag=300, threshold=50 → ceil(300/50) = 6 Pods
+    ############################################################################
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.oliveyoung.svc.cluster.local:9092  # kafka.yaml의 Service명과 일치
+        consumerGroup: oliveyoung-consumer-group  # Spring Boot의 spring.kafka.consumer.group-id 값으로 변경
+        topic: order-events                        # 실제 사용하는 Kafka topic명으로 변경
+        lagThreshold: "50"        # Pod당 처리 가능한 lag 수 (lag 50개당 Pod 1개)
+        activationLagThreshold: "10"  # lag이 10 미만이면 스케일 인 허용
+        offsetResetPolicy: latest
+        allowIdleConsumers: "false"   # 파티션 수보다 많은 Pod 생성 방지
+
+    ############################################################################
+    # 2. Redis Scaler - 대기열 길이 기반
+    #    계산식: ceil(listLength / listLength threshold) = 필요 Pod 수
+    #    예시: queue=500, threshold=100 → ceil(500/100) = 5 Pods
+    #
+    #    oliveyoung-redis.yaml: Service명 oliveyoung-redis, port 6379
+    ############################################################################
+    - type: redis
+      metadata:
+        address: oliveyoung-redis.oliveyoung.svc.cluster.local:6379  # redis.yaml의 Service명과 일치
+        listName: order-queue         # 실제 사용하는 Redis List/Queue 키명으로 변경
+        listLength: "100"             # Pod당 처리 가능한 큐 길이 (100개당 Pod 1개)
+        activationListLength: "10"    # 큐 길이 10 미만이면 스케일 인 허용
+        databaseIndex: "0"
+        enableTLS: "false"
+
+    ############################################################################
+    # 3. Datadog Scaler - RPS 기반
+    #    계산식: ceil(queryResult / queryValue) = 필요 Pod 수
+    #    예시: RPS=800, threshold=100 → ceil(800/100) = 8 Pods
+    #
+    #    deployment.yaml의 DD_SERVICE: "oliveyoung-api" 기준 쿼리
+    ############################################################################
+    - type: datadog
+      authenticationRef:
+        name: datadog-trigger-auth   # trigger-auth-datadog.yaml의 name과 일치
+      metadata:
+        type: global                 # 전체 RPS 합산 기준
+        # 최근 60초 평균 RPS 합산 쿼리
+        query: "sum:trace.servlet.request.hits{service:oliveyoung-api}.rollup(sum, 60)"
+        queryValue: "100"            # Pod당 처리 가능한 RPS (100 RPS당 Pod 1개)
+        activationQueryValue: "10"   # 10 RPS 미만이면 스케일 인 허용
+        age: "120"                   # 최근 120초 데이터 기준 (너무 짧으면 데이터 부족 오류)

@@ -1,0 +1,35 @@
+################################################################################
+# Datadog TriggerAuthentication
+# KEDA가 Datadog API에 접근하기 위한 인증 설정
+################################################################################
+
+---
+# Datadog API/APP Key Secret
+# kubectl create secret generic datadog-keda-secret \
+#   --from-literal=apiKey=<DATADOG_API_KEY> \
+#   --from-literal=appKey=<DATADOG_APP_KEY> \
+#   -n oliveyoung
+apiVersion: v1
+kind: Secret
+metadata:
+  name: datadog-keda-secret
+  namespace: oliveyoung
+type: Opaque
+stringData:
+  apiKey: "<DATADOG_API_KEY>"   # Datadog → Organization Settings → API Keys
+  appKey: "<DATADOG_APP_KEY>"   # Datadog → Organization Settings → Application Keys
+
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: datadog-trigger-auth
+  namespace: oliveyoung
+spec:
+  secretTargetRef:
+    - parameter: apiKey
+      name: datadog-keda-secret
+      key: apiKey
+    - parameter: appKey
+      name: datadog-keda-secret
+      key: appKey
