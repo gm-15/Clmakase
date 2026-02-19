@@ -419,11 +419,12 @@ module "argocd" {
 module "cli" {
   source = "./modules/cli"
 
-  vpc_id       = module.vpc.vpc_id
-  project_name = var.project_name
-  environment  = var.environment
-  aws_region   = var.aws_region
-  cli_sg_id    = module.security_groups.cli_sg_id
-  vpce_sg_id   = module.security_groups.vpce_sg_id
-  common_tags  = local.common_tags
+  vpc_id         = module.vpc.vpc_id
+  project_name   = var.project_name
+  environment    = var.environment
+  aws_region     = var.aws_region
+  nat_gateway_id = module.vpc.nat_gateway_ids[0]
+  cli_sg_id      = module.security_groups.cli_sg_id
+  vpce_sg_id     = module.security_groups.vpce_sg_id
+  common_tags    = local.common_tags
 }

@@ -27,12 +27,12 @@ output "redis_sg_id" {
   value       = aws_security_group.redis.id
 }
 
-output "bastion_cli_sg_id" {
-  description = "Bastion CLI server security group ID"
+output "cli_sg_id" {
+  description = "CLI server security group ID"
   value       = aws_security_group.cli.id
 }
 
-output "bastion_vpce_sg_id" {
-  description = "Bastion VPC Endpoint security group ID"
+output "vpce_sg_id" {
+  description = "VPC Endpoint security group ID"
   value       = aws_security_group.cli_vpce.id
 }

@@ -29,7 +29,7 @@ resource "aws_route" "private_nat_route" {
   
   # NAT 모듈의 output 이름을 확인하세요 (예: module.vpc.nat_gateway_ids)
   # 특정 AZ의 NAT를 지정하거나 첫 번째(index 0)를 지정합니다.
-  nat_gateway_id         = module.vpc.nat_gateway_ids[0]
+  nat_gateway_id         = var.nat_gateway_id
 }
 
 # 4. 서브넷과 라우팅 테이블 연결 (이 작업이 있어야 서브넷이 이 규칙을 따름)

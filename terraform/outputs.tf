@@ -208,15 +208,15 @@ output "argocd_namespace" {
   value       = module.argocd.argocd_namespace
 }
 
-# --- Bastion (CLI Server) ---
+# --- CLI Server ---
 output "bastion_instance_id" {
-  description = "Bastion CLI Server Instance ID (SSM 접속용)"
-  value       = module.bastion.instance_id
+  description = "CLI Server Instance ID (SSM 접속용)"
+  value       = module.cli.instance_id
 }
 
 output "bastion_private_ip" {
-  description = "Bastion CLI Server Private IP"
-  value       = module.bastion.private_ip
+  description = "CLI Server Private IP"
+  value       = module.cli.private_ip
 }
 
 # --- kubectl 설정 명령어 ---

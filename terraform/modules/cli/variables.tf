@@ -47,6 +47,11 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "nat_gateway_id" {
+  description = "NAT Gateway ID for CLI server private subnet routing"
+  type        = string
+}
+
 variable "cli_sg_id" {
   description = "Security group ID for CLI server"
   type        = string
