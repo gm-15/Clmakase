@@ -6,13 +6,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * 대기열 서비스 (Redis Sorted Set 기반)
+ * 대기열 서비스 - Version A (Circuit Breaker + 단일 Kafka 브로커)
  *
  * [면접 포인트]
  * Q: "왜 대기열을 Redis Sorted Set으로 구현했나요?"
@@ -31,7 +32,8 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class QueueService {
+@Profile("!version-c")
+public class QueueService implements QueueOperations {
 
     private static final String QUEUE_KEY = "purchase:queue";
     private static final String PROCESSING_KEY = "purchase:processing";
@@ -162,7 +164,4 @@ public class QueueService {
         return (int) Math.ceil(position / 10.0);
     }
 
-    // DTO Records
-    public record QueueEntry(String token, int position, int estimatedWaitSeconds) {}
-    public record QueueStatus(int position, int estimatedWaitSeconds, boolean canPurchase, boolean expired) {}
 }

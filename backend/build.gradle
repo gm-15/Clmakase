@@ -32,7 +32,10 @@ dependencies {
     // Kafka (대기열 버퍼링)
     implementation 'org.springframework.kafka:spring-kafka'
 
-    // Circuit Breaker (Kafka 장애 시 Redis 폴백)
+    // Spring Retry (@RetryableTopic Non-blocking Retry에 필요 - Version C)
+    implementation 'org.springframework.retry:spring-retry'
+
+    // Circuit Breaker (Kafka 장애 시 Redis 폴백 - Version A)
     implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
 
     // Cache (ElastiCache DB 캐시)

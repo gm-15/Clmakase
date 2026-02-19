@@ -3,7 +3,7 @@ package com.oliveyoung.sale.controller;
 import com.oliveyoung.sale.dto.ApiResponse;
 import com.oliveyoung.sale.dto.PurchaseRequest;
 import com.oliveyoung.sale.dto.PurchaseResponse;
-import com.oliveyoung.sale.service.PurchaseService;
+import com.oliveyoung.sale.service.PurchaseOperations;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "*")
 public class PurchaseController {
 
-    private final PurchaseService purchaseService;
+    private final PurchaseOperations purchaseService;
 
     /**
      * 구매 처리

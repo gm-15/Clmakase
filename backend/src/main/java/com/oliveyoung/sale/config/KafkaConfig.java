@@ -13,11 +13,13 @@ import org.springframework.kafka.core.*;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
+import org.springframework.context.annotation.Profile;
+
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Kafka 설정
+ * Kafka 설정 - Version A (Circuit Breaker + 단일 브로커)
  *
  * [아키텍처]
  * Producer: 대기열 진입 요청을 Kafka 토픽에 발행
@@ -28,6 +30,7 @@ import java.util.Map;
  * Redis ZSET = 순서 관리 (실시간 순위 조회)
  */
 @Configuration
+@Profile("!version-c")
 public class KafkaConfig {
 
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")

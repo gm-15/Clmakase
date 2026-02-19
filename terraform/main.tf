@@ -3,7 +3,8 @@
 # CJ Oliveyoung CloudWave Infrastructure
 #
 # Phase 1: VPC + Security Groups + ECR + RDS (Aurora MySQL)
-# Phase 2: EKS (AWS Console에서 수동 생성)!!
+# Phase 2: EKS + Node Group + OIDC (Terraform 자동화)
+# Phase 3: ElastiCache (Redis) + ALB Controller + ArgoCD
 ################################################################################
 
 terraform {
@@ -17,6 +18,18 @@ terraform {
     random = {
       source  = "hashicorp/random"
       version = "~> 3.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.24"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.12"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
     }
   }
 }
@@ -53,6 +66,34 @@ provider "aws" {
       Project     = var.project_name
       Environment = var.environment
       ManagedBy   = "terraform"
+    }
+  }
+}
+
+# ------------------------------------------------------------------------------
+# Kubernetes & Helm Providers (EKS 클러스터 생성 후 연결)
+# - ALB Controller, ArgoCD Helm 배포에 필요
+# ------------------------------------------------------------------------------
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
+  }
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority)
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
     }
   }
 }
@@ -295,4 +336,78 @@ resource "aws_route53_record" "www" {
   type    = "CNAME"
   ttl     = 300
   records = [var.domain_name]
+}
+
+# ==============================================================================
+# Phase 2: EKS Cluster + Node Group
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# EKS Module (Cluster + Managed Node Group + OIDC Provider)
+# ------------------------------------------------------------------------------
+module "eks" {
+  source = "./modules/eks"
+
+  project_name        = var.project_name
+  environment         = var.environment
+  cluster_name        = var.cluster_name
+  cluster_version     = "1.29"
+  private_subnet_ids  = module.vpc.private_subnet_ids
+  control_plane_sg_id = module.security_groups.eks_control_plane_sg_id
+  node_sg_id          = module.security_groups.eks_node_sg_id
+  node_instance_types = var.eks_node_instance_types
+  node_min_size       = var.eks_node_min_size
+  node_desired_size   = var.eks_node_desired_size
+  node_max_size       = var.eks_node_max_size
+  node_disk_size      = var.eks_node_disk_size
+  common_tags         = local.common_tags
+}
+
+# ==============================================================================
+# Phase 3: ElastiCache + ALB Controller + ArgoCD
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# ElastiCache Module (Redis)
+# - 대기열 관리 + 캐시 (EKS와 독립적으로 생성 가능)
+# ------------------------------------------------------------------------------
+module "elasticache" {
+  source = "./modules/elasticache"
+
+  project_name       = var.project_name
+  environment        = var.environment
+  node_type          = var.redis_node_type
+  private_subnet_ids = module.vpc.private_subnet_ids
+  redis_sg_id        = module.security_groups.redis_sg_id
+  common_tags        = local.common_tags
+}
+
+# ------------------------------------------------------------------------------
+# ALB Controller Module (IRSA + Helm)
+# - EKS OIDC Provider 필요 → EKS 모듈 의존
+# ------------------------------------------------------------------------------
+module "alb_controller" {
+  source = "./modules/alb-controller"
+
+  project_name              = var.project_name
+  environment               = var.environment
+  cluster_name              = module.eks.cluster_name
+  cluster_oidc_provider_arn = module.eks.oidc_provider_arn
+  cluster_oidc_provider_url = module.eks.oidc_provider_url
+  vpc_id                    = module.vpc.vpc_id
+  aws_region                = var.aws_region
+  common_tags               = local.common_tags
+}
+
+# ------------------------------------------------------------------------------
+# ArgoCD Module (Helm)
+# - GitOps 기반 K8s 배포 자동화
+# - EKS 클러스터 필요 → EKS 모듈 의존
+# ------------------------------------------------------------------------------
+module "argocd" {
+  source = "./modules/argocd"
+
+  project_name = var.project_name
+  environment  = var.environment
+  common_tags  = local.common_tags
 }

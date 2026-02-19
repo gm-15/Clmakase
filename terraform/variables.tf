@@ -57,15 +57,6 @@ variable "ecr_repository_name" {
   default     = "oliveyoung-api"
 }
 
-## db_password 제거됨
-## 비밀번호는 modules/rds에서 random_password로 자동 생성 → ASM에 보관
-
-variable "domain_name" {
-  description = "커스텀 도메인 이름 (Route53 + ACM + CloudFront)"
-  type        = string
-  default     = "clmakase.click"
-}
-
 variable "master_username" {
   description = "RDS 마스터 사용자 이름"
   type        = string
@@ -76,4 +67,48 @@ variable "database_name" {
   description = "생성할 데이터베이스 이름"
   type        = string
   default     = "oliveyoung"
+}
+
+variable "domain_name" {
+  description = "커스텀 도메인 이름 (Route53 + ACM + CloudFront)"
+  type        = string
+  default     = "clmakase.click"
+}
+
+# --- EKS Node Group ---
+variable "eks_node_instance_types" {
+  description = "EKS 워커 노드 인스턴스 타입"
+  type        = list(string)
+  default     = ["t3.medium"]
+}
+
+variable "eks_node_min_size" {
+  description = "노드 그룹 최소 노드 수"
+  type        = number
+  default     = 2
+}
+
+variable "eks_node_desired_size" {
+  description = "노드 그룹 현재(desired) 노드 수"
+  type        = number
+  default     = 3
+}
+
+variable "eks_node_max_size" {
+  description = "노드 그룹 최대 노드 수"
+  type        = number
+  default     = 6
+}
+
+variable "eks_node_disk_size" {
+  description = "노드 디스크 크기 (GB)"
+  type        = number
+  default     = 30
+}
+
+# --- ElastiCache ---
+variable "redis_node_type" {
+  description = "ElastiCache Redis 노드 타입"
+  type        = string
+  default     = "cache.t3.micro"
 }

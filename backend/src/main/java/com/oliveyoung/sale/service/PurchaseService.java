@@ -8,13 +8,16 @@ import com.oliveyoung.sale.repository.ProductRepository;
 import com.oliveyoung.sale.repository.PurchaseOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
 /**
- * 구매 서비스
+ * 구매 서비스 - Version A (동기 처리)
+ *
+ * API 요청 → DB 직접 INSERT (동기)
  *
  * [면접 포인트]
  * Q: "동시에 수천 명이 구매하면 어떻게 되나요?"
@@ -28,12 +31,13 @@ import java.math.BigDecimal;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PurchaseService {
+@Profile("!version-c")
+public class PurchaseService implements PurchaseOperations {
 
     private final ProductRepository productRepository;
     private final PurchaseOrderRepository orderRepository;
     private final ProductService productService;
-    private final QueueService queueService;
+    private final QueueOperations queueService;
     private final SaleStateService saleStateService;
 
     /**
@@ -54,7 +58,7 @@ public class PurchaseService {
         int quantity = request.quantity();
 
         // 1. 대기열 상태 확인 (구매 가능 여부)
-        QueueService.QueueStatus queueStatus = queueService.getQueueStatus(sessionId, token, productId);
+        QueueOperations.QueueStatus queueStatus = queueService.getQueueStatus(sessionId, token, productId);
         if (!queueStatus.canPurchase()) {
             throw new IllegalStateException("아직 구매할 수 없습니다. 대기열 순번: " + queueStatus.position());
         }

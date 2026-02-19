@@ -1,0 +1,21 @@
+# Version C 프로필 설정
+# 사용법: SPRING_PROFILES_ACTIVE=local,version-c (로컬)
+#         SPRING_PROFILES_ACTIVE=prod,version-c (프로덕션)
+
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093,localhost:9094}
+    producer:
+      # 멱등성 Producer (클러스터 환경 필수)
+      properties:
+        enable.idempotence: true
+    consumer:
+      properties:
+        # 격리 수준: 커밋된 메시지만 읽기 (트랜잭션 Producer 호환)
+        isolation.level: read_committed
+
+# Circuit Breaker health 비활성화 (Version C에서는 CB 미사용)
+management:
+  health:
+    circuitbreakers:
+      enabled: false

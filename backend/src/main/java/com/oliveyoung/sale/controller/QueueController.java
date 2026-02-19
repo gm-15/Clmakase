@@ -1,7 +1,7 @@
 package com.oliveyoung.sale.controller;
 
 import com.oliveyoung.sale.dto.*;
-import com.oliveyoung.sale.service.QueueService;
+import com.oliveyoung.sale.service.QueueOperations;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "*")
 public class QueueController {
 
-    private final QueueService queueService;
+    private final QueueOperations queueService;
 
     /**
      * 대기열 진입
@@ -27,7 +27,7 @@ public class QueueController {
             @RequestHeader(value = "X-Session-Id", defaultValue = "demo-session") String sessionId,
             @Valid @RequestBody QueueEntryRequest request
     ) {
-        QueueService.QueueEntry entry = queueService.enterQueue(sessionId, request.productId());
+        QueueOperations.QueueEntry entry = queueService.enterQueue(sessionId, request.productId());
 
         QueueEntryResponse response = new QueueEntryResponse(
                 entry.token(),
@@ -53,7 +53,7 @@ public class QueueController {
             @RequestParam Long productId,
             @RequestParam String token
     ) {
-        QueueService.QueueStatus status = queueService.getQueueStatus(sessionId, token, productId);
+        QueueOperations.QueueStatus status = queueService.getQueueStatus(sessionId, token, productId);
 
         String message;
         if (status.canPurchase()) {

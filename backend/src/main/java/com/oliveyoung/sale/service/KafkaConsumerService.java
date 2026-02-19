@@ -4,12 +4,13 @@ import com.oliveyoung.sale.config.KafkaConfig;
 import com.oliveyoung.sale.dto.QueueEntryMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 /**
- * Kafka Consumer 서비스
+ * Kafka Consumer 서비스 - Version A (단일 브로커)
  *
  * Kafka 토픽에서 대기열 진입 메시지를 소비하여 Redis Sorted Set에 추가
  *
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Profile("!version-c")
 public class KafkaConsumerService {
 
     private static final String QUEUE_KEY = "purchase:queue";

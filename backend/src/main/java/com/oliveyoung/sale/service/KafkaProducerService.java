@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
@@ -17,7 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 
 /**
- * Kafka Producer 서비스 (Circuit Breaker 적용)
+ * Kafka Producer 서비스 - Version A (Circuit Breaker 적용)
  *
  * [정상 흐름]  사용자 → Kafka Produce → Consumer → Redis ZADD
  * [장애 흐름]  사용자 → Kafka 실패 → Circuit Open → Redis ZADD 직접 (폴백)
@@ -37,6 +38,7 @@ import java.time.Duration;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Profile("!version-c")
 public class KafkaProducerService {
 
     private final KafkaTemplate<String, QueueEntryMessage> kafkaTemplate;

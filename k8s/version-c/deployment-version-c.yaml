@@ -1,0 +1,113 @@
+################################################################################
+# OliveYoung API Deployment - Version C
+# Kafka 3-Broker 클러스터 + DLQ (Circuit Breaker 제거)
+#
+# [Version A deployment.yaml와의 차이]
+# - SPRING_PROFILES_ACTIVE: "prod,version-c"
+# - KAFKA_BOOTSTRAP_SERVERS: 3개 브로커 주소
+################################################################################
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oliveyoung-api
+  namespace: oliveyoung
+  labels:
+    app: oliveyoung-api
+    version: c
+    tags.datadoghq.com/env: "prod"
+    tags.datadoghq.com/service: "oliveyoung-api"
+    tags.datadoghq.com/version: "1.0.0"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: oliveyoung-api
+  template:
+    metadata:
+      labels:
+        app: oliveyoung-api
+        tags.datadoghq.com/env: "prod"
+        tags.datadoghq.com/service: "oliveyoung-api"
+        tags.datadoghq.com/version: "1.0.0"
+      annotations:
+        # --- Prometheus ---
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
+        # --- Datadog APM ---
+        admission.datadoghq.com/java-lib.version: "latest"
+        # --- Datadog 로그 수집 ---
+        ad.datadoghq.com/oliveyoung-api.logs: '[{"source": "java", "service": "oliveyoung-api"}]'
+        # --- Datadog 메트릭 수집 ---
+        ad.datadoghq.com/oliveyoung-api.check_names: '["openmetrics"]'
+        ad.datadoghq.com/oliveyoung-api.init_configs: '[{}]'
+        ad.datadoghq.com/oliveyoung-api.instances: |
+          [
+            {
+              "prometheus_url": "http://%%host%%:8080/actuator/prometheus",
+              "namespace": "spring_boot",
+              "metrics": ["*"]
+            }
+          ]
+    spec:
+      containers:
+        - name: oliveyoung-api
+          image: 160884802838.dkr.ecr.ap-northeast-2.amazonaws.com/oliveyoung-api:IMAGE_TAG
+          ports:
+            - containerPort: 8080
+          env:
+            # --- Datadog ---
+            - name: DD_SERVICE
+              value: "oliveyoung-api"
+            - name: DD_ENV
+              value: "prod"
+            - name: DD_VERSION
+              value: "1.0.0"
+            - name: DD_LOGS_INJECTION
+              value: "true"
+            - name: DD_PROFILING_ENABLED
+              value: "true"
+            # --- Spring Boot (Version C) ---
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod,version-c"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-0.kafka-headless.oliveyoung.svc.cluster.local:9092,kafka-1.kafka-headless.oliveyoung.svc.cluster.local:9092,kafka-2.kafka-headless.oliveyoung.svc.cluster.local:9092"
+            - name: REDIS_HOST
+              value: "oliveyoung-redis"
+            - name: DB_HOST
+              value: "cloudwave-dev-aurora.cluster-chqm4ig82r3p.ap-northeast-2.rds.amazonaws.com"
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_NAME
+              value: "oliveyoung"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: oliveyoung-db-secret
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: oliveyoung-db-secret
+                  key: DB_PASSWORD
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 90
+            periodSeconds: 15

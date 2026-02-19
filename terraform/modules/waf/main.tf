@@ -6,27 +6,20 @@
 # AI 기반 Managed Rules로 DDoS, 봇, SQLi/XSS 등 자동 차단
 ################################################################################
 
-locals {
-  name_prefix = "${var.project_name}-${var.environment}"
-}
-# 상위(Root)에서 넘겨주는 aws.us_east_1 프로바이더를 받을 준비.
 terraform {
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      # 버전은 루트 모듈과 맞추는 것이 좋습니다.
-      version = "~> 5.0" 
+      source                = "hashicorp/aws"
+      configuration_aliases = [ aws ]
     }
   }
 }
 
-provider "aws" { 
-  region = "us-east-1"  # CloudFront WAF는 필수  
-  alias  = "us_east_1"
-  }
+locals {
+  name_prefix = "${var.project_name}-${var.environment}"
+}
 
 resource "aws_wafv2_web_acl" "main" {
-  provider = aws.us_east_1 # 명시적으로 지정
   name        = "${var.project_name}-waf"
   description = "Advanced Managed Rules for CloudFront with DDoS and Bot Protection"
   scope       = "CLOUDFRONT"
@@ -34,33 +27,13 @@ resource "aws_wafv2_web_acl" "main" {
   default_action {
     allow {}
   }
-/* AWS Sheild Standard/Advanced로 L3/L4 DDos를 이미 방어하고 있다.
-  # 우선순위 0: L7 DDoS 방어
-  rule {
-    name     = "AWS-AWSManagedRulesAntiDDoSRuleSet"
-    priority = 0
-    override_action {
-      none {} 
-    }
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesAntiDDoSRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "AntiDDoS"
-      sampled_requests_enabled   = true
-    }
-  }
-*/
+
   # 우선순위 1: Amazon IP 평판 목록 (AI 위협 인텔리전스)
   rule {
     name     = "AWS-AWSManagedRulesAmazonIpReputationList"
     priority = 1
     override_action {
-      none {} 
+      none {}
     }
     statement {
       managed_rule_group_statement {
@@ -80,9 +53,8 @@ resource "aws_wafv2_web_acl" "main" {
     name     = "AWS-AWSManagedRulesAnonymousIpList"
     priority = 2
     override_action {
-      none {}  
+      none {}
     }
-       
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesAnonymousIpList"
@@ -101,7 +73,7 @@ resource "aws_wafv2_web_acl" "main" {
     name     = "AWS-AWSManagedRulesCommonRuleSet"
     priority = 3
     override_action {
-      none {} 
+      none {}
     }
     statement {
       managed_rule_group_statement {
@@ -121,7 +93,7 @@ resource "aws_wafv2_web_acl" "main" {
     name     = "AWS-AWSManagedRulesBotControlRuleSet"
     priority = 4
     override_action {
-      none {} 
+      none {}
     }
     statement {
       managed_rule_group_statement {
@@ -130,7 +102,7 @@ resource "aws_wafv2_web_acl" "main" {
 
         managed_rule_group_configs {
           aws_managed_rules_bot_control_rule_set {
-            inspection_level = "COMMON" # 기본 수준의 봇 탐지
+            inspection_level = "COMMON"
             enable_machine_learning = true
           }
         }
@@ -143,12 +115,12 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
-  # 우선순위 5: 속도 제한 + 캡차 (IP당 5분간 2000 요청 초과 시)
+  # 우선순위 5: 속도 제한 (IP당 5분간 2000 요청 초과 시)
   rule {
     name     = "RateLimitWithCaptcha"
     priority = 5
     action {
-      block {} # capcha 대신 block 사용
+      block {}
     }
     statement {
       rate_based_statement {
@@ -168,7 +140,7 @@ resource "aws_wafv2_web_acl" "main" {
     name     = "AWS-AWSManagedRulesLinuxRuleSet"
     priority = 6
     override_action {
-      none {} 
+      none {}
     }
     statement {
       managed_rule_group_statement {
@@ -188,7 +160,7 @@ resource "aws_wafv2_web_acl" "main" {
     name     = "AWS-AWSManagedRulesUnixRuleSet"
     priority = 7
     override_action {
-      none {} 
+      none {}
     }
     statement {
       managed_rule_group_statement {

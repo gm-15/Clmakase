@@ -159,14 +159,57 @@ output "acm_certificate_arn_alb" {
   value       = module.acm_alb.certificate_arn
 }
 
-# --- EKS 콘솔 생성 시 필요한 정보 요약 ---
-output "eks_console_info" {
-  description = "AWS Console에서 EKS 생성 시 필요한 정보"
-  value = {
-    vpc_id               = module.vpc.vpc_id
-    private_subnet_ids   = module.vpc.private_subnet_ids
-    public_subnet_ids    = module.vpc.public_subnet_ids
-    control_plane_sg_id  = module.security_groups.eks_control_plane_sg_id
-    node_sg_id           = module.security_groups.eks_node_sg_id
-  }
+# --- EKS ---
+output "eks_cluster_endpoint" {
+  description = "EKS Cluster API Endpoint"
+  value       = module.eks.cluster_endpoint
+}
+
+output "eks_cluster_name" {
+  description = "EKS Cluster Name"
+  value       = module.eks.cluster_name
+}
+
+output "eks_cluster_version" {
+  description = "EKS Kubernetes Version"
+  value       = module.eks.cluster_version
+}
+
+output "eks_oidc_provider_arn" {
+  description = "EKS OIDC Provider ARN (IRSA용)"
+  value       = module.eks.oidc_provider_arn
+}
+
+output "eks_node_group_role_arn" {
+  description = "EKS Node Group IAM Role ARN"
+  value       = module.eks.node_group_role_arn
+}
+
+# --- ElastiCache (Redis) ---
+output "redis_endpoint" {
+  description = "ElastiCache Redis Primary Endpoint"
+  value       = module.elasticache.redis_endpoint
+}
+
+output "redis_port" {
+  description = "ElastiCache Redis Port"
+  value       = module.elasticache.redis_port
+}
+
+# --- ALB Controller ---
+output "alb_controller_role_arn" {
+  description = "ALB Controller IRSA Role ARN"
+  value       = module.alb_controller.alb_controller_role_arn
+}
+
+# --- ArgoCD ---
+output "argocd_namespace" {
+  description = "ArgoCD Namespace"
+  value       = module.argocd.argocd_namespace
+}
+
+# --- kubectl 설정 명령어 ---
+output "kubectl_config_command" {
+  description = "kubectl 설정 명령어"
+  value       = "aws eks update-kubeconfig --name ${module.eks.cluster_name} --region ${var.aws_region}"
 }
