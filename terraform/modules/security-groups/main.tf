@@ -8,7 +8,7 @@
 #   3. EKS Node SG - 워커 노드 통신
 #   4. RDS SG - MySQL 접근
 #   5. Redis SG - ElastiCache 접근
-#   6. Bastion CLI SG - CLI 서버 통신
+#   6. CLI SG - CLI 서버 통신
 #   7. VPC Endpoint SG - SSM Endpoint 접근
 ################################################################################
 
@@ -211,6 +211,19 @@ resource "aws_vpc_security_group_ingress_rule" "cp_from_node" {
   tags = { Name = "cp-from-node" }
 }
 
+# CLI 서버 -> EKS Control Plane(API) 접속 허용
+resource "aws_vpc_security_group_ingress_rule" "cp_from_cli" {
+  security_group_id            = aws_security_group.eks_control_plane.id
+  description                  = "CLI server to control plane API"
+  from_port                    = 443
+  to_port                      = 443
+  ip_protocol                  = "tcp"
+  # CLI 서버의 보안 그룹 ID를 여기에 넣으세요 (아까 var.cli_sg_id 라고 하셨던 것)
+  referenced_security_group_id = aws_security_group.cli.id
+
+  tags = { Name = "cp-from-cli-server" }
+}
+
 # ------------------------------------------------------------------------------
 # 4. RDS Security Group
 #    - EKS Node → RDS (MySQL 3306)
@@ -240,15 +253,15 @@ resource "aws_vpc_security_group_ingress_rule" "rds_from_node" {
   tags = { Name = "rds-from-eks-node" }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "rds_from_bastion" {
+resource "aws_vpc_security_group_ingress_rule" "rds_from_cli" {
   security_group_id            = aws_security_group.rds.id
-  description                  = "Bastion CLI server to RDS MySQL"
+  description                  = "CLI server to RDS MySQL"
   from_port                    = 3306
   to_port                      = 3306
   ip_protocol                  = "tcp"
-  referenced_security_group_id = aws_security_group.bastion_cli.id
+  referenced_security_group_id = aws_security_group.cli.id
 
-  tags = { Name = "rds-from-bastion" }
+  tags = { Name = "rds-from-cli" }
 }
 
 resource "aws_vpc_security_group_egress_rule" "rds_all" {
@@ -299,16 +312,16 @@ resource "aws_vpc_security_group_egress_rule" "redis_all" {
 }
 
 # ------------------------------------------------------------------------------
-# 6. Bastion CLI Server Security Group
-#    - CLI 서버 아웃바운드 (SSM Endpoint, RDS, S3)
+# 6. CLI Server Security Group
+#    - CLI 서버 아웃바운드 (SSM Endpoint, RDS, eks)
 # ------------------------------------------------------------------------------
-resource "aws_security_group" "bastion_cli" {
-  name_prefix = "${local.name_prefix}-bastion-cli-"
-  description = "Security group for Bastion CLI Server"
+resource "aws_security_group" "cli" {
+  name_prefix = "${local.name_prefix}-cli-"
+  description = "Security group for CLI Server"
   vpc_id      = var.vpc_id
 
   tags = merge(var.common_tags, {
-    Name = "${local.name_prefix}-bastion-cli-sg"
+    Name = "${local.name_prefix}-cli-sg"
   })
 
   lifecycle {
@@ -316,26 +329,26 @@ resource "aws_security_group" "bastion_cli" {
   }
 }
 
-resource "aws_vpc_security_group_egress_rule" "bastion_cli_all" {
-  security_group_id = aws_security_group.bastion_cli.id
-  description       = "All outbound traffic (SSM, RDS, S3)"
+resource "aws_vpc_security_group_egress_rule" "cli_all" {
+  security_group_id = aws_security_group.cli.id
+  description       = "All outbound traffic (SSM, RDS, eks)"
   ip_protocol       = "-1"
   cidr_ipv4         = "0.0.0.0/0"
 
-  tags = { Name = "bastion-cli-all-egress" }
+  tags = { Name = "cli-all-egress" }
 }
 
 # ------------------------------------------------------------------------------
 # 7. VPC Endpoint Security Group
 #    - CLI 서버 → SSM Interface Endpoints (HTTPS 443)
 # ------------------------------------------------------------------------------
-resource "aws_security_group" "bastion_vpce" {
-  name_prefix = "${local.name_prefix}-bastion-vpce-"
+resource "aws_security_group" "cli_vpce" {
+  name_prefix = "${local.name_prefix}-cli-vpce-"
   description = "Allow CLI server to access SSM Endpoints"
   vpc_id      = var.vpc_id
 
   tags = merge(var.common_tags, {
-    Name = "${local.name_prefix}-bastion-vpce-sg"
+    Name = "${local.name_prefix}-cli-vpce-sg"
   })
 
   lifecycle {
@@ -343,13 +356,20 @@ resource "aws_security_group" "bastion_vpce" {
   }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "vpce_from_bastion" {
-  security_group_id            = aws_security_group.bastion_vpce.id
+resource "aws_vpc_security_group_ingress_rule" "vpce_from_cli" {
+  security_group_id            = aws_security_group.cli_vpce.id
   description                  = "CLI server to SSM Endpoints (HTTPS)"
   from_port                    = 443
   to_port                      = 443
   ip_protocol                  = "tcp"
-  referenced_security_group_id = aws_security_group.bastion_cli.id
+  referenced_security_group_id = aws_security_group.cli.id
 
-  tags = { Name = "vpce-from-bastion" }
+  tags = { Name = "vpce-from-cli" }
+}
+
+resource "aws_vpc_security_group_egress_rule" "vpce_out" {
+  security_group_id = aws_security_group.cli_vpce.id
+  description       = "Allow VPCE to communicate with AWS services"
+  ip_protocol       = "-1"          # 모든 프로토콜
+  cidr_ipv4         = "0.0.0.0/0"   # AWS 서비스 엔드포인트는 유동적이므로 보통 전체 허용
 }

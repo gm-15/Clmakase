@@ -416,14 +416,14 @@ module "argocd" {
 # Bastion (CLI Server) Module
 # - SSM 기반 Private CLI 서버 (SSH 없이 접근)
 # ------------------------------------------------------------------------------
-module "bastion" {
-  source = "./modules/bastion"
+module "cli" {
+  source = "./modules/cli"
 
   vpc_id       = module.vpc.vpc_id
   project_name = var.project_name
   environment  = var.environment
   aws_region   = var.aws_region
-  cli_sg_id    = module.security_groups.bastion_cli_sg_id
-  vpce_sg_id   = module.security_groups.bastion_vpce_sg_id
+  cli_sg_id    = module.security_groups.cli_sg_id
+  vpce_sg_id   = module.security_groups.vpce_sg_id
   common_tags  = local.common_tags
 }

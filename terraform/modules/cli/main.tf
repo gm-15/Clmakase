@@ -22,23 +22,20 @@ resource "aws_route_table" "private_rt" {
   tags = { Name = "${local.name_prefix}-cli-private-rt" }
 }
 
-# 3. 서브넷과 라우팅 테이블 연결 (이 작업이 있어야 서브넷이 이 규칙을 따름)
+# 3. 라우팅 테이블에 NAT Gateway 경로 추가
+resource "aws_route" "private_nat_route" {
+  route_table_id         = aws_route_table.private_rt.id
+  destination_cidr_block = "0.0.0.0/0"
+  
+  # NAT 모듈의 output 이름을 확인하세요 (예: module.vpc.nat_gateway_ids)
+  # 특정 AZ의 NAT를 지정하거나 첫 번째(index 0)를 지정합니다.
+  nat_gateway_id         = module.vpc.nat_gateway_ids[0]
+}
+
+# 4. 서브넷과 라우팅 테이블 연결 (이 작업이 있어야 서브넷이 이 규칙을 따름)
 resource "aws_route_table_association" "private_rt_assign" {
   subnet_id      = aws_subnet.cli_private_subnet.id
   route_table_id = aws_route_table.private_rt.id
-}
-
-# 4. S3 Gateway Endpoint (패키지 설치용)
-resource "aws_vpc_endpoint" "s3_gw" {
-  vpc_id            = var.vpc_id
-  service_name      = "com.amazonaws.${var.aws_region}.s3"
-  vpc_endpoint_type = "Gateway"
-
-  # 위에서 만든 라우팅 테이블 ID를 참조합니다.
-  # 이렇게 하면 라우팅 테이블에 S3행 경로가 자동으로 추가됩니다.
-  route_table_ids = [aws_route_table.private_rt.id]
-
-  tags = { Name = "${local.name_prefix}-s3-gateway-endpoint" }
 }
 
 # 5. IAM Instance Profile (SSM 권한)
