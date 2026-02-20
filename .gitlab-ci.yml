@@ -83,7 +83,7 @@ deploy-frontend:
     - cd frontend
     - npm ci
     - VITE_API_URL=$ALB_URL npm run build
-    - aws s3 sync dist/ s3://$S3_BUCKET/frontend/ --delete
+    - aws s3 sync dist/ s3://$S3_BUCKET/ --delete --exclude "*.json" --exclude "*.log"
   artifacts:
     paths:
       - frontend/dist/
