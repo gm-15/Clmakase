@@ -15,7 +15,7 @@ metadata:
     # Terraform으로 만든 ALB SG (terraform output alb_sg_id 로 확인)
     alb.ingress.kubernetes.io/security-groups: sg-069521242ebb59dc0
     # Public Subnet (terraform output public_subnet_ids 로 확인)
-    alb.ingress.kubernetes.io/subnets: subnet-02878d20393cda274, subnet-0bbfafac222767d30
+    alb.ingress.kubernetes.io/subnets: subnet-0e794130c99477da6, subnet-0afaaff6cafbb6de4
     # Target Type: IP (Pod에 직접 트래픽 전달)
     alb.ingress.kubernetes.io/target-type: ip
     # Health Check 설정
