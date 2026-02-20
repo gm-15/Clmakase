@@ -38,35 +38,7 @@ variable "node_sg_id" {
   type        = string
 }
 
-variable "node_instance_types" {
-  description = "Instance types for node group"
-  type        = list(string)
-  default     = ["t3.medium"]
-}
-
-variable "node_min_size" {
-  description = "Minimum number of nodes"
-  type        = number
-  default     = 2
-}
-
-variable "node_desired_size" {
-  description = "Desired number of nodes"
-  type        = number
-  default     = 3
-}
-
-variable "node_max_size" {
-  description = "Maximum number of nodes"
-  type        = number
-  default     = 6
-}
-
-variable "node_disk_size" {
-  description = "Disk size in GB for worker nodes"
-  type        = number
-  default     = 30
-}
+# Node instance/scaling 변수 제거 - Karpenter NodePool에서 관리
 
 variable "common_tags" {
   description = "Common tags for all resources"

@@ -22,6 +22,11 @@ variable "vpc_cidr" {
   type        = string
 }
 
+variable "cluster_name" {
+  description = "EKS cluster name (Karpenter discovery tag)"
+  type        = string
+}
+
 variable "common_tags" {
   description = "Common tags for all resources"
   type        = map(string)

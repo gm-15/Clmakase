@@ -133,6 +133,7 @@ module "security_groups" {
   environment  = var.environment
   vpc_id       = module.vpc.vpc_id
   vpc_cidr     = module.vpc.vpc_cidr
+  cluster_name = var.cluster_name
   common_tags  = local.common_tags
 }
 
@@ -348,11 +349,6 @@ module "eks" {
   private_subnet_ids  = module.vpc.private_subnet_ids
   control_plane_sg_id = module.security_groups.eks_control_plane_sg_id
   node_sg_id          = module.security_groups.eks_node_sg_id
-  node_instance_types = var.eks_node_instance_types
-  node_min_size       = var.eks_node_min_size
-  node_desired_size   = var.eks_node_desired_size
-  node_max_size       = var.eks_node_max_size
-  node_disk_size      = var.eks_node_disk_size
   common_tags         = local.common_tags
 }
 

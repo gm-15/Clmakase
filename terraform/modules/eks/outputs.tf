@@ -41,3 +41,8 @@ output "node_group_role_arn" {
   description = "Node Group IAM Role ARN"
   value       = aws_iam_role.eks_node_group.arn
 }
+
+output "cluster_oidc_issuer_url" {
+  description = "OIDC Provider issuer URL (Karpenter용)"
+  value       = aws_eks_cluster.this.identity[0].oidc[0].issuer
+}

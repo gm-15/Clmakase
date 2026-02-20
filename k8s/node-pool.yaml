@@ -29,5 +29,4 @@ spec:
   disruption:
     # [가용성] 대규모 트래픽 중 노드가 갑자기 삭제되는 것을 방지
     consolidationPolicy: WhenUnderutilized
-    consolidateAfter: 30s
     expireAfter: 720h # 30일마다 노드 교체 (보안 패치 및 신선도 유지)

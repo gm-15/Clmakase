@@ -330,14 +330,14 @@ resource "aws_security_group" "cli" {
   }
 }
 
-resource "aws_vpc_security_group_egress_rule" "cli_all" {
-  security_group_id = aws_security_group.cli.id
-  description       = "All outbound traffic (SSM, RDS, eks)"
-  ip_protocol       = "-1"
-  cidr_ipv4         = "0.0.0.0/0"
-
-  tags = { Name = "cli-all-egress" }
-}
+#resource "aws_vpc_security_group_egress_rule" "cli_all" {
+#  security_group_id = aws_security_group.cli.id
+#  description       = "All outbound traffic (SSM, RDS, eks)"
+#  ip_protocol       = "-1"
+#  cidr_ipv4         = "0.0.0.0/0"
+#
+#  tags = { Name = "cli-all-egress" }
+#}
 
 # ------------------------------------------------------------------------------
 # 7. VPC Endpoint Security Group

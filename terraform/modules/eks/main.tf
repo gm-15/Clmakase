@@ -2,7 +2,8 @@
 # EKS Module - Main
 # CJ Oliveyoung CloudWave Infrastructure
 #
-# Creates: EKS Cluster + Managed Node Group + OIDC Provider (IRSA)
+# Creates: EKS Cluster + OIDC Provider (IRSA)
+# Node provisioning: Karpenter (별도 Helm 배포)
 ################################################################################
 
 locals {
@@ -112,68 +113,9 @@ resource "aws_iam_role_policy_attachment" "node_ecr" {
 }
 
 # ------------------------------------------------------------------------------
-# EKS Managed Node Group
-# - Private 서브넷에 워커 노드 배치
-# - min/desired/max 노드 수 지정
+# Node Group 제거 - Karpenter가 노드 프로비저닝 담당
+# IAM Role은 Karpenter 노드용으로 유지
 # ------------------------------------------------------------------------------
-resource "aws_launch_template" "eks_nodes" {
-  name_prefix = "${local.name_prefix}-eks-node-"
-
-  vpc_security_group_ids = [
-    aws_eks_cluster.this.vpc_config[0].cluster_security_group_id,
-    var.node_sg_id
-  ]
-
-  block_device_mappings {
-    device_name = "/dev/xvda"
-    ebs {
-      volume_size = var.node_disk_size
-      volume_type = "gp3"
-    }
-  }
-
-  tag_specifications {
-    resource_type = "instance"
-    tags = merge(var.common_tags, {
-      Name = "${local.name_prefix}-eks-node"
-    })
-  }
-}
-
-resource "aws_eks_node_group" "this" {
-  cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "${local.name_prefix}-node-group"
-  node_role_arn   = aws_iam_role.eks_node_group.arn
-  subnet_ids      = var.private_subnet_ids
-
-  ami_type       = "AL2_x86_64"
-  instance_types = var.node_instance_types
-
-  launch_template {
-    id      = aws_launch_template.eks_nodes.id
-    version = aws_launch_template.eks_nodes.latest_version
-  }
-
-  scaling_config {
-    min_size     = var.node_min_size
-    desired_size = var.node_desired_size
-    max_size     = var.node_max_size
-  }
-
-  update_config {
-    max_unavailable = 1
-  }
-
-  tags = merge(var.common_tags, {
-    Name = "${local.name_prefix}-node-group"
-  })
-
-  depends_on = [
-    aws_iam_role_policy_attachment.node_worker,
-    aws_iam_role_policy_attachment.node_cni,
-    aws_iam_role_policy_attachment.node_ecr,
-  ]
-}
 
 # ------------------------------------------------------------------------------
 # OIDC Provider (IRSA - IAM Roles for Service Accounts)
