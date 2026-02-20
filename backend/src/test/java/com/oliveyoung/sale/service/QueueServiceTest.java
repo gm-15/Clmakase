@@ -27,6 +27,9 @@ class QueueServiceTest {
     @Mock
     private SetOperations<String, Object> setOperations;
 
+    @Mock
+    private KafkaProducerService kafkaProducerService;
+
     @InjectMocks
     private QueueService queueService;
 
