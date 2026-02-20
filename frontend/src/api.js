@@ -8,7 +8,7 @@
  *    프론트에서는 try-catch와 response.success 체크로 처리합니다.
  */
 
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_API_URL || '') + '/api';
 
 // 세션 ID 생성 (시연용 간소화)
 const getSessionId = () => {

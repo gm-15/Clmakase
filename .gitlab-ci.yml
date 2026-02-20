@@ -2,6 +2,7 @@ stages:
   - test
   - build
   - scan
+  - deploy-frontend
   - load-test
 
 variables:
@@ -9,6 +10,8 @@ variables:
   ECR_REGISTRY: 160884802838.dkr.ecr.ap-northeast-2.amazonaws.com
   ECR_REPOSITORY: oliveyoung-api
   IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+  S3_BUCKET: cloudwave-assets-dev
+  ALB_URL: "http://k8s-oliveyou-oliveyou-a886c5cbad-1691723051.ap-northeast-2.elb.amazonaws.com"
 
 test:
   stage: test
@@ -68,6 +71,24 @@ trivy-scan:
       - trivy-report.json
     expire_in: 30 days
   allow_failure: true
+  only:
+    - main
+
+deploy-frontend:
+  stage: deploy-frontend
+  image: node:20-alpine
+  before_script:
+    - apk add --no-cache aws-cli
+  script:
+    - cd frontend
+    - npm ci
+    - VITE_API_URL=$ALB_URL npm run build
+    - aws s3 sync dist/ s3://$S3_BUCKET/frontend/ --delete
+    - aws s3 website s3://$S3_BUCKET --index-document frontend/index.html --error-document frontend/index.html
+  artifacts:
+    paths:
+      - frontend/dist/
+    expire_in: 1 day
   only:
     - main
 
