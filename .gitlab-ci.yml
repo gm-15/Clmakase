@@ -109,19 +109,13 @@ update_manifest:
   image: alpine:latest
   before_script:
     - apk add --no-cache git sed
-    # GitLab CI에서 Git Push를 위한 인증 설정
     - git config user.email "ci-bot@oliveyoung.com"
     - git config user.name "CI Bot"
     - git remote set-url origin https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
   script:
-    # 1. deployment.yaml의 이미지 태그를 현재 커밋 SHA로 교체
-    #    IMAGE_TAG(플레이스홀더) 또는 이전 SHA 모두 매칭하여 새 SHA로 교체
-    #    K8s YAML에 $변수를 직접 쓰면 해석 안 되므로 sed로 리터럴 교체
     - sed -i "s|oliveyoung-api:[a-zA-Z0-9_-]*|oliveyoung-api:${CI_COMMIT_SHORT_SHA}|g" k8s/deployment.yaml
-    # 2. 변경 확인 (CI 로그에서 태그가 올바르게 교체되었는지 확인용)
     - echo "Updated image tag to ${CI_COMMIT_SHORT_SHA}"
     - grep "image:" k8s/deployment.yaml
-    # 3. Git에 커밋 & Push → ArgoCD가 감지
     - git add k8s/deployment.yaml
     - git commit -m "chore: update image tag to ${CI_COMMIT_SHORT_SHA} [skip ci]" || echo "No changes to commit"
     - git push origin HEAD:main
