@@ -5,10 +5,16 @@
 #   1. Kafka  - Consumer Lag 기반 Scale Out/In
 #   2. Redis  - 대기열(List) 길이 기반 Scale Out/In
 #   3. Datadog - RPS 기반 Scale Out/In
+#   4. Cron   - 세일 시간대 사전 Scale Out (Warm-up)
 #
 # 동작 방식:
-#   - 3개 트리거 중 가장 높은 값을 기준으로 replicas 결정
+#   - 4개 트리거 중 가장 높은 값을 기준으로 replicas 결정
 #   - KEDA가 내부적으로 HPA를 생성하여 관리
+#
+# Cron 트리거 수정 방법:
+#   - start/end: cron 표현식 (분 시 * * *)
+#   - timezone: 타임존 (Asia/Seoul 고정)
+#   - desiredReplicas: 세일 시간대 유지할 최소 Pod 수
 ################################################################################
 
 apiVersion: keda.sh/v1alpha1
@@ -97,3 +103,33 @@ spec:
         queryValue: "100"            # Pod당 처리 가능한 RPS (100 RPS당 Pod 1개)
         activationQueryValue: "10"   # 10 RPS 미만이면 스케일 인 허용
         age: "120"                   # 최근 120초 데이터 기준 (너무 짧으면 데이터 부족 오류)
+
+    ############################################################################
+    # 4. Cron Scaler - 세일 시간대 사전 Pod + 노드 Warm-up
+    #
+    #    목적:
+    #      세일 오픈 전 미리 Pod를 확보하여 Karpenter가 노드를 추가할 시간을 확보
+    #      → 세일 오픈 시 콜드 스타트 없이 즉시 트래픽 수용
+    #
+    #    동작 흐름:
+    #      start 시각 → desiredReplicas만큼 Pod 요청
+    #               → 노드 부족 시 Karpenter 자동으로 노드 추가 (약 2~3분 소요)
+    #               → 세일 오픈 전 노드 + Pod 모두 Ready 상태
+    #      end 시각   → cron 트리거 해제, 실제 메트릭 기준(Kafka/Redis/Datadog)으로 복귀
+    #               → 트래픽 감소 시 자연스럽게 Scale In
+    #
+    #    ※ 수정 가이드:
+    #       start/end 형식: "MM HH * * *"  (분 시 매일)
+    #       예) 오후 11시 50분 시작 → "50 23 * * *"
+    #           오전 1시 30분 종료  → "30 01 * * *"
+    #
+    #    ※ desiredReplicas:
+    #       세일 시간대 보장할 최소 Pod 수
+    #       이후 Kafka/Redis/Datadog 트리거가 maxReplicaCount(20)까지 추가 확장
+    ############################################################################
+    - type: cron
+      metadata:
+        timezone: Asia/Seoul
+        start: "50 23 * * *"     # ← 세일 시작 10분 전 (수정 필요)
+        end: "30 01 * * *"       # ← 세일 종료 후   (수정 필요)
+        desiredReplicas: "10"    # ← 세일 시간대 최소 Pod 수 (수정 필요)
