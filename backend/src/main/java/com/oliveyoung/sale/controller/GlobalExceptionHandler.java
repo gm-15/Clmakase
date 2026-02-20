@@ -7,6 +7,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * 전역 예외 처리
@@ -55,6 +56,15 @@ public class GlobalExceptionHandler {
 
         log.warn("유효성 검사 실패: {}", message);
         return ApiResponse.error(message, "VALIDATION_ERROR");
+    }
+
+    /**
+     * 정적 리소스 없음 (favicon.ico 등)
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public void handleNoResource(NoResourceFoundException e) {
+        // 404로 조용히 처리, 응답 바디 없음
     }
 
     /**
