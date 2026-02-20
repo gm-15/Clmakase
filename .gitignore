@@ -40,7 +40,7 @@ dist/
 Thumbs.db
 nul
 
-# Claude Code
+# Claude 
 .claude/settings.local.json
 
 # Docker
