@@ -16,7 +16,7 @@ import java.util.List;
  */
 @Slf4j
 @Component
-@Profile("local") // 로컬 환경에서만 실행
+@Profile("local | prod") // 로컬 및 prod 환경에서 실행 (이미 데이터 있으면 스킵)
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
