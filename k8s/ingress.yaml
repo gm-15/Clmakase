@@ -13,7 +13,7 @@ metadata:
     # 인터넷 접근 가능한 ALB
     alb.ingress.kubernetes.io/scheme: internet-facing
     # Terraform으로 만든 ALB SG (terraform output alb_sg_id 로 확인)
-    alb.ingress.kubernetes.io/security-groups: sg-069521242ebb59dc0
+    alb.ingress.kubernetes.io/security-groups: sg-0f588f1693cb4c0ad
     # Public Subnet (terraform output public_subnet_ids 로 확인)
     alb.ingress.kubernetes.io/subnets: subnet-0e794130c99477da6, subnet-0afaaff6cafbb6de4
     # Target Type: IP (Pod에 직접 트래픽 전달)
