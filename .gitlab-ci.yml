@@ -79,7 +79,7 @@ load-test:
   script:
     - k6 run k6/load-test.js
   variables:
-    BASE_URL: "http://localhost:8080"
+    BASE_URL: "http://k8s-oliveyou-oliveyou-a886c5cbad-1691723051.ap-northeast-2.elb.amazonaws.com"
   artifacts:
     when: always
     paths:
