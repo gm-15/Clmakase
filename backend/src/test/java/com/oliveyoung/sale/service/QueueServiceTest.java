@@ -45,7 +45,6 @@ class QueueServiceTest {
     @DisplayName("대기열 진입 성공")
     void enterQueue_success() {
         when(zSetOperations.size("purchase:queue")).thenReturn(50L);
-        when(zSetOperations.rank(eq("purchase:queue"), anyString())).thenReturn(50L);
 
         QueueService.QueueEntry result = queueService.enterQueue("session-1", 1L);
 
