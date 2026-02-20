@@ -70,6 +70,7 @@ resource "aws_subnet" "private" {
     Name                                        = "${local.name_prefix}-private-${var.azs[count.index]}"
     "kubernetes.io/cluster/${var.cluster_name}"  = "shared"
     "kubernetes.io/role/internal-elb"            = "1"
+    "karpenter.sh/discovery"                     = var.cluster_name
   })
 }
 

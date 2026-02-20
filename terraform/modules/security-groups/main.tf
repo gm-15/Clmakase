@@ -103,6 +103,7 @@ resource "aws_security_group" "eks_node" {
 
   tags = merge(var.common_tags, {
     Name = "${local.name_prefix}-eks-node-sg"
+    "karpenter.sh/discovery" = var.cluster_name
   })
 
   lifecycle {
