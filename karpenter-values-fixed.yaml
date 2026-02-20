@@ -1,0 +1,7 @@
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::160884802838:role/KarpenterControllerRole-cloudwave
+settings:
+  clusterName: cloudwave-eks
+  clusterEndpoint: "https://0F7605B9E4E10B71AD29B6BEC8BB064F.yl4.ap-northeast-2.eks.amazonaws.com"
+  interruptionQueue: ""

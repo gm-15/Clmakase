@@ -1,4 +1,4 @@
-apiVersion: karpenter.k8s.aws/v1beta1
+apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
   name: default
@@ -6,7 +6,7 @@ spec:
   # [1] OS 및 AMI 설정
   amiFamily: AL2023
   amiSelectorTerms:
-    - id: "ami-0428587635697666f" # ap-northeast-2 EKS 1.30 AL2023 최신 이미지 (SSM 조회 우회)
+    - id: "ami-00fbdeed99883f1c1" # ap-northeast-2 EKS 1.32 AL2023 최신 이미지
 
   # [2] IAM 역할 설정
   role: "cloudwave-eks-karpenter-node-role"
@@ -23,7 +23,7 @@ spec:
   # [4] 네트워크 및 보안 그룹 태그 기반 선택
   subnetSelectorTerms:
     - tags:
-        karpenter.sh/discovery: "cloudwave-dev-vpc"
+        karpenter.sh/discovery: "cloudwave-eks"
   securityGroupSelectorTerms:
     - tags:
-        karpenter.sh/discovery: "cloudwave-dev-vpc"
+        karpenter.sh/discovery: "cloudwave-eks"
