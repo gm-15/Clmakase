@@ -11,6 +11,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.ZSetOperations;
 
+import com.oliveyoung.sale.dto.QueueEntryMessage;
+
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -50,7 +52,7 @@ class QueueServiceTest {
         assertThat(result.token()).isNotNull();
         assertThat(result.position()).isEqualTo(51);
         assertThat(result.estimatedWaitSeconds()).isEqualTo(6); // ceil(51/10)
-        verify(zSetOperations).add(eq("purchase:queue"), anyString(), anyDouble());
+        verify(kafkaProducerService).sendQueueEntry(any(QueueEntryMessage.class));
     }
 
     @Test
