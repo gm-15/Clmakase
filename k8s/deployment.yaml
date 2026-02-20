@@ -9,7 +9,7 @@ metadata:
     tags.datadoghq.com/service: "oliveyoung-api"
     tags.datadoghq.com/version: "1.0.0"
 spec:
-  replicas: 1
+  replicas: 2
   revisionHistoryLimit: 3
   selector:
     matchLabels:
