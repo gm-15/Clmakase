@@ -84,7 +84,7 @@ update_manifest:
     - echo "Updated image tag to ${CI_COMMIT_SHORT_SHA}"
     - grep "image:" k8s/deployment.yaml
     - git add k8s/deployment.yaml
-    - git diff --cached --quiet && echo "No changes" || git commit -m "chore: update image tag to ${CI_COMMIT_SHORT_SHA} [skip ci]"
+    - git commit -m "chore: update image tag to ${CI_COMMIT_SHORT_SHA} [skip ci]" || true
     - git push origin HEAD:main
   only:
     - main
