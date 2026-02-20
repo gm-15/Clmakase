@@ -1,5 +1,5 @@
 output "certificate_arn" {
-  description = "기존 ACM 인증서 ARN (CloudFront 연동용)"
+  description = "ACM 인증서 ARN"
   value       = aws_acm_certificate.this.arn
 }
 

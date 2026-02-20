@@ -19,8 +19,13 @@ output "public_subnet_ids" {
 }
 
 output "private_subnet_ids" {
-  description = "Private subnet IDs (EKS nodes)"
+  description = "Private App subnet IDs (EKS/ArgoCD)"
   value       = aws_subnet.private[*].id
+}
+
+output "private_data_subnet_ids" {
+  description = "Private Data subnet IDs (ElastiCache/RDS)"
+  value       = aws_subnet.private_data[*].id
 }
 
 output "internet_gateway_id" {

@@ -26,11 +26,11 @@ $ErrorActionPreference = "Stop"
 
 # 포트 설정
 if ($Version -eq "A") {
-    $Port = 8080
+    $Port = 8081
     $ComposeFile = "docker-compose-version-a.yml"
     $Label = "Version A (Circuit Breaker + Single Broker)"
 } else {
-    $Port = 8081
+    $Port = 8082
     $ComposeFile = "docker-compose-version-c.yml"
     $Label = "Version C (3-Broker Cluster + DLQ)"
 }
@@ -50,7 +50,7 @@ $healthy = $false
 
 while ($retry -lt $maxRetries -and -not $healthy) {
     try {
-        $response = Invoke-WebRequest -Uri "$BaseUrl/actuator/health" -TimeoutSec 3 -ErrorAction Stop
+        $response = Invoke-WebRequest -Uri "$BaseUrl/actuator/health" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
         if ($response.StatusCode -eq 200) {
             $healthy = $true
             Write-Host "  Backend is healthy!" -ForegroundColor Green
@@ -93,6 +93,7 @@ for ($i = 1; $i -le $Users; $i++) {
                 } `
                 -Body $reqBody `
                 -TimeoutSec 30 `
+                -UseBasicParsing `
                 -ErrorAction Stop
 
             $sw.Stop()

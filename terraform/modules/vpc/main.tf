@@ -75,6 +75,23 @@ resource "aws_subnet" "private" {
 }
 
 # ------------------------------------------------------------------------------
+# Private Data Subnets (ElastiCache, RDS 전용)
+# - App Subnet과 분리하여 보안 및 관리 용이성 확보
+# ------------------------------------------------------------------------------
+resource "aws_subnet" "private_data" {
+  count = length(var.private_data_subnet_cidrs)
+
+  vpc_id            = aws_vpc.this.id
+  cidr_block        = var.private_data_subnet_cidrs[count.index]
+  availability_zone = var.azs[count.index]
+
+  tags = merge(var.common_tags, {
+    Name = "${local.name_prefix}-private-data-${var.azs[count.index]}"
+    Tier = "data"
+  })
+}
+
+# ------------------------------------------------------------------------------
 # Elastic IPs for NAT Gateways (각 AZ에 1개씩)
 # ------------------------------------------------------------------------------
 resource "aws_eip" "nat" {
@@ -153,5 +170,12 @@ resource "aws_route_table_association" "private" {
   count = length(var.private_subnet_cidrs)
 
   subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private[count.index].id
+}
+
+resource "aws_route_table_association" "private_data" {
+  count = length(var.private_data_subnet_cidrs)
+
+  subnet_id      = aws_subnet.private_data[count.index].id
   route_table_id = aws_route_table.private[count.index].id
 }

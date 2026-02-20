@@ -112,14 +112,15 @@ locals {
 module "vpc" {
   source = "./modules/vpc"
 
-  project_name         = var.project_name
-  environment          = var.environment
-  vpc_cidr             = var.vpc_cidr
-  azs                  = var.azs
-  public_subnet_cidrs  = var.public_subnet_cidrs
-  private_subnet_cidrs = var.private_subnet_cidrs
-  cluster_name         = var.cluster_name
-  common_tags          = local.common_tags
+  project_name              = var.project_name
+  environment               = var.environment
+  vpc_cidr                  = var.vpc_cidr
+  azs                       = var.azs
+  public_subnet_cidrs       = var.public_subnet_cidrs
+  private_subnet_cidrs      = var.private_subnet_cidrs
+  private_data_subnet_cidrs = var.private_data_subnet_cidrs
+  cluster_name              = var.cluster_name
+  common_tags               = local.common_tags
 }
 
 # ------------------------------------------------------------------------------
@@ -156,7 +157,7 @@ module "rds" {
 
   project_name       = var.project_name
   environment        = var.environment
-  private_subnet_ids = module.vpc.private_subnet_ids
+  private_subnet_ids = module.vpc.private_data_subnet_ids
   db_password = module.secrets.db_password
   rds_sg_id          = module.security_groups.rds_sg_id
   database_name      = "oliveyoung"
@@ -164,12 +165,6 @@ module "rds" {
   # master_password는 random_password로 자동 생성 → ASM에 보관
   instance_class     = "db.t3.medium"
   common_tags        = local.common_tags
-}
-resource "aws_secretsmanager_secret" "db_secret" {
-  name       = "${var.project_name}/db-password"
-  kms_key_id = module.kms.rds_key_arn # <--- RDS 키 사용
-  # 대기시간 없이 삭제
-  recovery_window_in_days = 0
 }
 
 # ------------------------------------------------------------------------------
@@ -206,11 +201,9 @@ module "secrets" {
   project_name    = var.project_name
   environment     = var.environment
   # [변경 포인트]: RDS 전용 KMS 키를 사용하여 보안성 강화
-  kms_key_arn     = module.kms.rds_key_arn 
+  kms_key_arn     = module.kms.rds_key_arn
   master_username = var.master_username
   database_name   = var.database_name
-  # [변경 포인트]: RDS 엔드포인트를 실시간으로 받아서 Secret 값에 포함
-  db_host         = module.rds.cluster_endpoint 
   common_tags     = local.common_tags
 }
 
@@ -351,7 +344,7 @@ module "eks" {
   project_name        = var.project_name
   environment         = var.environment
   cluster_name        = var.cluster_name
-  cluster_version     = "1.29"
+  cluster_version     = "1.30"
   private_subnet_ids  = module.vpc.private_subnet_ids
   control_plane_sg_id = module.security_groups.eks_control_plane_sg_id
   node_sg_id          = module.security_groups.eks_node_sg_id
@@ -377,7 +370,7 @@ module "elasticache" {
   project_name       = var.project_name
   environment        = var.environment
   node_type          = var.redis_node_type
-  private_subnet_ids = module.vpc.private_subnet_ids
+  private_subnet_ids = module.vpc.private_data_subnet_ids
   redis_sg_id        = module.security_groups.redis_sg_id
   common_tags        = local.common_tags
 }

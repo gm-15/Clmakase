@@ -66,8 +66,9 @@ spec:
               value: "prod"
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: "kafka.oliveyoung.svc.cluster.local:9092"
+            # ElastiCache 엔드포인트 (terraform output redis_endpoint 로 확인)
             - name: REDIS_HOST
-              value: "oliveyoung-redis"
+              value: "oliveyoung-dev-redis.xxxxxx.apn2.cache.amazonaws.com"
             - name: DB_HOST
               value: "cloudwave-dev-aurora.cluster-chqm4ig82r3p.ap-northeast-2.rds.amazonaws.com"
             - name: DB_PORT

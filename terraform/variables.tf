@@ -40,9 +40,15 @@ variable "public_subnet_cidrs" {
 }
 
 variable "private_subnet_cidrs" {
-  description = "Private subnet CIDR blocks"
+  description = "Private App subnet CIDR blocks (EKS/ArgoCD)"
   type        = list(string)
   default     = ["10.0.1.0/24", "10.0.2.0/24"]
+}
+
+variable "private_data_subnet_cidrs" {
+  description = "Private Data subnet CIDR blocks (ElastiCache/RDS)"
+  type        = list(string)
+  default     = ["10.0.11.0/24", "10.0.12.0/24"]
 }
 
 variable "cluster_name" {

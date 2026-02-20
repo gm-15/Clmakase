@@ -15,6 +15,8 @@ resource "aws_secretsmanager_secret" "this" {
   description = "Aurora MySQL password encrypted with RDS KMS Key"
   kms_key_id  = var.kms_key_arn
 
+  recovery_window_in_days = 0
+
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-db-secret"
   })
@@ -26,7 +28,6 @@ resource "aws_secretsmanager_secret_version" "this" {
   secret_string = jsonencode({
     username = var.master_username
     password = random_password.db_password.result
-    host     = var.db_host
     port     = 3306
     dbname   = var.database_name
   })

@@ -69,6 +69,8 @@ resource "aws_eks_cluster" "this" {
   ]
 }
 
+
+
 # ------------------------------------------------------------------------------
 # Node Group IAM Role
 # - EC2 워커 노드가 EKS, ECR, VPC CNI와 통신하기 위한 권한
@@ -114,14 +116,43 @@ resource "aws_iam_role_policy_attachment" "node_ecr" {
 # - Private 서브넷에 워커 노드 배치
 # - min/desired/max 노드 수 지정
 # ------------------------------------------------------------------------------
+resource "aws_launch_template" "eks_nodes" {
+  name_prefix = "${local.name_prefix}-eks-node-"
+
+  vpc_security_group_ids = [
+    aws_eks_cluster.this.vpc_config[0].cluster_security_group_id,
+    var.node_sg_id
+  ]
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size = var.node_disk_size
+      volume_type = "gp3"
+    }
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = merge(var.common_tags, {
+      Name = "${local.name_prefix}-eks-node"
+    })
+  }
+}
+
 resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "${local.name_prefix}-node-group"
   node_role_arn   = aws_iam_role.eks_node_group.arn
   subnet_ids      = var.private_subnet_ids
 
+  ami_type       = "AL2_x86_64"
   instance_types = var.node_instance_types
-  disk_size      = var.node_disk_size
+
+  launch_template {
+    id      = aws_launch_template.eks_nodes.id
+    version = aws_launch_template.eks_nodes.latest_version
+  }
 
   scaling_config {
     min_size     = var.node_min_size

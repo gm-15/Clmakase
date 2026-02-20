@@ -29,7 +29,9 @@
       "Bash(docker run:*)",
       "Bash(MSYS_NO_PATHCONV=1 docker run:*)",
       "Bash(dir \"C:\\\\Users\\\\KDT49\\\\Clmakase\\\\terraform\\\\modules\")",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git rm:*)",
+      "Bash(git rebase:*)"
     ]
   }
 }

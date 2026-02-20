@@ -9,5 +9,4 @@ variable "database_name"   {
     type = string
     default = "oliveyoung"
     }
-variable "db_host"         { type = string } # RDS 모듈의 엔드포인트를 받기 위함
 variable "common_tags"     { type = map(string) }

@@ -36,7 +36,7 @@ function Run-LoadTest {
                 $resp = Invoke-WebRequest -Uri "$url/api/queue/enter" `
                     -Method POST `
                     -Headers @{ "Content-Type" = "application/json"; "X-Session-Id" = $sid } `
-                    -Body $reqBody -TimeoutSec 30 -ErrorAction Stop
+                    -Body $reqBody -TimeoutSec 30 -UseBasicParsing -ErrorAction Stop
                 $sw.Stop()
                 return [PSCustomObject]@{ Success=$true; Time=$sw.ElapsedMilliseconds }
             } catch {
@@ -80,7 +80,7 @@ Write-Host "================================================================" -F
 
 # Version A 테스트
 Write-Host "`n>>> Testing Version A (Circuit Breaker + Single Broker)..." -ForegroundColor Yellow
-$resultA = Run-LoadTest -BaseUrl "http://localhost:8080" -VersionName "A" -UserCount $Users -ProdId $ProductId
+$resultA = Run-LoadTest -BaseUrl "http://localhost:8081" -VersionName "A" -UserCount $Users -ProdId $ProductId
 
 # 5초 대기 (시스템 안정화)
 Write-Host ">>> Cooling down 5s..." -ForegroundColor Gray
@@ -88,7 +88,7 @@ Start-Sleep -Seconds 5
 
 # Version C 테스트
 Write-Host ">>> Testing Version C (3-Broker Cluster + DLQ)..." -ForegroundColor Yellow
-$resultC = Run-LoadTest -BaseUrl "http://localhost:8081" -VersionName "C" -UserCount $Users -ProdId $ProductId
+$resultC = Run-LoadTest -BaseUrl "http://localhost:8082" -VersionName "C" -UserCount $Users -ProdId $ProductId
 
 # 비교 결과 출력
 Write-Host "`n================================================================" -ForegroundColor Cyan
