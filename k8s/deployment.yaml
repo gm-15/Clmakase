@@ -41,7 +41,13 @@ spec:
               "metrics": ["*"]
             }
           ]
-    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: oliveyoung-api
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: oliveyoung-api
           # CI/CD에서 sed로 IMAGE_TAG를 커밋 SHA로 자동 교체
