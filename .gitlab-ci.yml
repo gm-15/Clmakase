@@ -2,7 +2,6 @@ stages:
   - test
   - build
   - scan
-  - deploy
   - load-test
 
 variables:
@@ -68,23 +67,6 @@ trivy-scan:
       - trivy-report.json
     expire_in: 30 days
   allow_failure: true
-  only:
-    - main
-
-update_manifest:
-  stage: deploy
-  image: alpine:latest
-  before_script:
-    - apk add --no-cache git sed
-    - git config user.email ci-bot@oliveyoung.com
-    - git config user.name CI-Bot
-    - git remote set-url origin https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
-  script:
-    - sed -i "s|oliveyoung-api:[a-zA-Z0-9_-]*|oliveyoung-api:${CI_COMMIT_SHORT_SHA}|g" k8s/deployment.yaml
-    - grep image: k8s/deployment.yaml
-    - git add k8s/deployment.yaml
-    - git commit -m "[skip ci] update image tag ${CI_COMMIT_SHORT_SHA}" || true
-    - git push origin HEAD:main
   only:
     - main
 
