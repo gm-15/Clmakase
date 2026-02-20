@@ -11,6 +11,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.ZSetOperations;
 
+import com.oliveyoung.sale.dto.QueueEntryMessage;
+
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -27,6 +29,9 @@ class QueueServiceTest {
     @Mock
     private SetOperations<String, Object> setOperations;
 
+    @Mock
+    private KafkaProducerService kafkaProducerService;
+
     @InjectMocks
     private QueueService queueService;
 
@@ -40,14 +45,13 @@ class QueueServiceTest {
     @DisplayName("대기열 진입 성공")
     void enterQueue_success() {
         when(zSetOperations.size("purchase:queue")).thenReturn(50L);
-        when(zSetOperations.rank(eq("purchase:queue"), anyString())).thenReturn(50L);
 
         QueueService.QueueEntry result = queueService.enterQueue("session-1", 1L);
 
         assertThat(result.token()).isNotNull();
         assertThat(result.position()).isEqualTo(51);
         assertThat(result.estimatedWaitSeconds()).isEqualTo(6); // ceil(51/10)
-        verify(zSetOperations).add(eq("purchase:queue"), anyString(), anyDouble());
+        verify(kafkaProducerService).sendQueueEntry(any(QueueEntryMessage.class));
     }
 
     @Test
