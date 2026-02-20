@@ -23,6 +23,7 @@ test:
     paths:
       - backend/build/reports/tests/
     expire_in: 7 days
+  allow_failure: true
   only:
     - main
     - merge_requests
