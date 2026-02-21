@@ -11,11 +11,11 @@ import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
  */
 export const options = {
     stages: [
-        { duration: '30s', target: 100 },  // 30초 동안 0 → 100명 (워밍업)
-        { duration: '1m',  target: 100 },  // 1분간 100명 유지 → KEDA Kafka lag 트리거 유도
-        { duration: '30s', target: 300 },  // 30초 동안 100 → 300명 (피크 부하)
-        { duration: '2m',  target: 300 },  // 2분간 300명 유지 → Karpenter 노드 추가 유도
-        { duration: '30s', target: 0 },    // 30초 동안 300 → 0명 (쿨다운)
+        { duration: '30s', target: 300 },  // 30초 동안 0 → 300명 (급격한 피크)
+        { duration: '1m',  target: 300 },  // 1분간 300명 유지 → KEDA/Karpenter 유도
+        { duration: '30s', target: 200 },  // 30초 동안 300 → 200명 감소
+        { duration: '30s', target: 100 },  // 30초 동안 200 → 100명 감소
+        { duration: '30s', target: 0 },    // 30초 동안 100 → 0명 (쿨다운)
     ],
     thresholds: {
         http_req_duration: ['p(95)<2000'], // 95% 요청이 2000ms 이내 (스케일아웃 고려)
