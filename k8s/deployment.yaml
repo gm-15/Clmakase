@@ -83,9 +83,8 @@ spec:
               value: "true"
             - name: DD_PROFILING_ENABLED
               value: "true"
-            # --- Spring Boot (Version C: Non-blocking Retry + DLT) ---
             - name: SPRING_PROFILES_ACTIVE
-              value: "prod,version-c"
+              value: "prod"
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-0.kafka-headless.oliveyoung.svc.cluster.local:9092,kafka-1.kafka-headless.oliveyoung.svc.cluster.local:9092,kafka-2.kafka-headless.oliveyoung.svc.cluster.local:9092"
             # ElastiCache 엔드포인트 (terraform output redis_endpoint 로 확인)
@@ -124,5 +123,5 @@ spec:
             httpGet:
               path: /actuator/health
               port: 8080
-            initialDelaySeconds: 90
+            initialDelaySeconds: 150
             periodSeconds: 15
