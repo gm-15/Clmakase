@@ -118,3 +118,9 @@ variable "redis_node_type" {
   type        = string
   default     = "cache.t3.micro"
 }
+
+variable "alb_domain" {
+  description = "ALB DNS 이름 (kubectl get ingress 로 확인). CloudFront /api/* 라우팅에 사용"
+  type        = string
+  default     = ""
+}

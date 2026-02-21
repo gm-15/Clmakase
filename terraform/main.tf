@@ -276,6 +276,9 @@ module "cloudfront" {
   waf_acl_id            = module.waf.web_acl_arn
   domain_name           = var.domain_name
   acm_certificate_arn   = module.acm_cloudfront.certificate_arn
+
+  # ALB DNS (kubectl get ingress -n oliveyoung -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
+  alb_domain = var.alb_domain
 }
 
 # ------------------------------------------------------------------------------

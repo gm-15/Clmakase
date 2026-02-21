@@ -25,3 +25,7 @@ ecr_repository_name = "oliveyoung-api"
 
 # Domain (Route53 + ACM + CloudFront)
 domain_name = "clmakase.click"
+
+# ALB DNS → CloudFront /api/* 라우팅에 사용
+# kubectl get ingress -n oliveyoung -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}' 로 확인
+alb_domain = "k8s-oliveyou-oliveyou-a886c5cbad-1691723051.ap-northeast-2.elb.amazonaws.com"

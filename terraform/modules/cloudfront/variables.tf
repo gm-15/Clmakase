@@ -28,3 +28,9 @@ variable "acm_certificate_arn" {
   type        = string
   default     = ""
 }
+
+variable "alb_domain" {
+  description = "ALB DNS 이름 (kubectl get ingress -n oliveyoung 으로 확인)"
+  type        = string
+  default     = ""
+}
