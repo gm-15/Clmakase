@@ -45,7 +45,25 @@
       "Bash(docker context:*)",
       "Bash(where:*)",
       "Bash(git -C:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(done)",
+      "Bash(prod\"\\)\nprod 환경 최초 배포 시 상품 8개 자동 초기화\n이미 데이터 존재하면 즉시 스킵 \\(운영 영향 없음\\)\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(argocd app sync:*)",
+      "Bash(findstr:*)",
+      "Bash(ALB=\"k8s-oliveyou-oliveyou-a886c5cbad-1691723051.ap-northeast-2.elb.amazonaws.com\")",
+      "Bash(winget install:*)",
+      "Bash(k6 version:*)",
+      "Bash(\"/c/Program Files/k6/k6.exe\" version)",
+      "Bash(k6 run:*)",
+      "Bash(\"/c/Program Files/k6/k6.exe\" run --vus 1 --iterations 1 --env BASE_URL=\"http://k8s-oliveyou-oliveyou-a886c5cbad-1691723051.ap-northeast-2.elb.amazonaws.com\" /c/Users/KDT49/Clmakase/k6/load-test.js)",
+      "Bash(npm install)",
+      "Bash(node:*)",
+      "Bash(npm --version:*)",
+      "Bash(winget search:*)",
+      "Bash(git fetch:*)",
+      "Bash(for topic in queue-entry-requests order-events queue-entry-requests-retry-0 queue-entry-requests-retry-1 queue-entry-requests-retry-2 queue-entry-requests-dlt order-events-retry-0 order-events-retry-1 order-events-retry-2 order-events-dlt)",
+      "Bash(do)",
+      "Bash(__NEW_LINE_40b16b807c5e0e0b__ echo \"=== 세일 시작 ===\")"
     ]
   }
 }
