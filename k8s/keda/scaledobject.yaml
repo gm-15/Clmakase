@@ -64,7 +64,7 @@ spec:
     ############################################################################
     - type: kafka
       metadata:
-        bootstrapServers: kafka.oliveyoung.svc.cluster.local:9092  # kafka.yaml의 Service명과 일치
+        bootstrapServers: kafka-0.kafka-headless.oliveyoung.svc.cluster.local:9092,kafka-1.kafka-headless.oliveyoung.svc.cluster.local:9092,kafka-2.kafka-headless.oliveyoung.svc.cluster.local:9092
         consumerGroup: queue-processor-group      # KafkaConsumerService의 group-id
         topic: queue-entry-requests               # QueueService가 produce/consume하는 토픽
         lagThreshold: "50"        # Pod당 처리 가능한 lag 수 (lag 50개당 Pod 1개)

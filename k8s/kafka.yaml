@@ -1,6 +1,20 @@
 ################################################################################
-# Kafka on EKS (Single Broker + Zookeeper)
-# 올리브영 대기열 버퍼링용
+# Kafka on EKS - 3-Broker StatefulSet 클러스터
+#
+# [Version A → Version C 전환]
+# Version A: Deployment 단일 브로커 (RF=1)
+# Version C: StatefulSet 3-broker 클러스터 (RF=3, min.insync.replicas=2)
+#
+# [StatefulSet 사용 이유]
+# - 각 Pod에 고유 hostname 부여: kafka-0, kafka-1, kafka-2
+# - headless DNS: kafka-{n}.kafka-headless.oliveyoung.svc.cluster.local
+# - Kafka BROKER_ID가 Pod 순서(ordinal)와 매핑됨
+#
+# [3-broker 구성으로 얻는 것]
+# - RF=3: 브로커 1개 장애 시에도 데이터 보존
+# - min.insync.replicas=2: 최소 2개 브로커에 쓰여야 commit → 데이터 일관성
+# - ACKS=all + Idempotent Producer: 중복/유실 없는 exactly-once 시맨틱
+# - Non-blocking Retry + DLT: 실패 메시지가 전체 파티션을 막지 않음
 ################################################################################
 
 ---
@@ -39,6 +53,7 @@ spec:
             limits:
               cpu: 250m
               memory: 512Mi
+
 ---
 apiVersion: v1
 kind: Service
@@ -54,16 +69,54 @@ spec:
   clusterIP: None
 
 ---
-# Kafka Broker
+# Kafka Headless Service
+# StatefulSet Pod별 DNS 제공:
+#   kafka-0.kafka-headless.oliveyoung.svc.cluster.local:9092
+#   kafka-1.kafka-headless.oliveyoung.svc.cluster.local:9092
+#   kafka-2.kafka-headless.oliveyoung.svc.cluster.local:9092
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-headless
+  namespace: oliveyoung
+spec:
+  selector:
+    app: kafka
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+  clusterIP: None
+
+---
+# Kafka 클라이언트용 단일 엔드포인트 (기존 호환성)
+# kafka.oliveyoung.svc.cluster.local:9092 → 3개 브로커 중 임의 연결
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: oliveyoung
+spec:
+  selector:
+    app: kafka
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+  clusterIP: None
+
+---
+# Kafka 3-Broker StatefulSet
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: kafka
   namespace: oliveyoung
   labels:
     app: kafka
 spec:
-  replicas: 1
+  serviceName: kafka-headless      # Pod DNS: kafka-{n}.kafka-headless.oliveyoung...
+  replicas: 3
   selector:
     matchLabels:
       app: kafka
@@ -72,22 +125,50 @@ spec:
       labels:
         app: kafka
     spec:
+      # Kafka 브로커 간 Anti-Affinity: 각 브로커를 다른 노드에 배치
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: kafka
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: kafka
           image: confluentinc/cp-kafka:7.5.0
           ports:
             - containerPort: 9092
           env:
-            - name: KAFKA_BROKER_ID
-              value: "1"
+            # Pod 이름 (kafka-0, kafka-1, kafka-2) → ADVERTISED_LISTENERS에 사용
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # BROKER_ID: hostname에서 ordinal 추출 (kafka-0 → 0)
+            - name: KAFKA_BROKER_ID_COMMAND
+              value: "echo ${HOSTNAME##*-}"
             - name: KAFKA_ZOOKEEPER_CONNECT
               value: "zookeeper.oliveyoung.svc.cluster.local:2181"
-            - name: KAFKA_ADVERTISED_LISTENERS
-              value: "PLAINTEXT://kafka.oliveyoung.svc.cluster.local:9092"
             - name: KAFKA_LISTENERS
               value: "PLAINTEXT://0.0.0.0:9092"
+            # 각 브로커 자신의 headless DNS로 광고
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://$(POD_NAME).kafka-headless.oliveyoung.svc.cluster.local:9092"
+            # --- 복제 설정 (3-broker 클러스터 기준) ---
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
-              value: "1"
+              value: "3"
+            - name: KAFKA_DEFAULT_REPLICATION_FACTOR
+              value: "3"
+            - name: KAFKA_MIN_INSYNC_REPLICAS
+              value: "2"
+            # --- Idempotent Producer / Exactly-once 지원 ---
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "3"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "2"
+            # --- 토픽 기본 설정 ---
             - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
               value: "true"
             - name: KAFKA_NUM_PARTITIONS
@@ -101,16 +182,3 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kafka
-  namespace: oliveyoung
-spec:
-  selector:
-    app: kafka
-  ports:
-    - port: 9092
-      targetPort: 9092
-  clusterIP: None
