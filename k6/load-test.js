@@ -21,7 +21,7 @@ export const options = {
     },
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
+const BASE_URL = __ENV.BASE_URL || 'https://api.clmakase.click';
 
 export default function () {
     const sessionId = `k6-vu-${__VU}-${__ITER}`;
