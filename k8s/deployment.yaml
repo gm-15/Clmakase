@@ -29,7 +29,20 @@ spec:
         # --- Datadog APM (트레이스 자동 주입) ---
         admission.datadoghq.com/java-lib.version: "latest"
         # --- Datadog 로그 수집 ---
-        ad.datadoghq.com/oliveyoung-api.logs: '[{"source": "java", "service": "oliveyoung-api"}]'
+        ad.datadoghq.com/oliveyoung-api.logs: |
+          [
+            {
+              "source": "java",
+              "service": "oliveyoung-api",
+              "processing_rules": [
+                {
+                  "type": "exclude_at_match",
+                  "name": "exclude_debug_only",
+                  "pattern": ".*DEBUG.*"
+                }
+              ]
+            }
+          ]
         # --- Datadog 메트릭 수집 ---
         ad.datadoghq.com/oliveyoung-api.check_names: '["openmetrics"]'
         ad.datadoghq.com/oliveyoung-api.init_configs: '[{}]'
