@@ -42,12 +42,15 @@ public class CacheConfig {
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         // GenericJackson2JsonRedisSerializer 기본값(As.PROPERTY)은 List를 배열로 직렬화할 때
         // 타입 정보를 포함할 수 없어 역직렬화 시 MismatchedInputException 발생.
-        // As.WRAPPER_ARRAY 사용 시: ["java.util.ArrayList", [["ClassName", {...}], ...]] 형태로
-        // 읽기/쓰기 포맷이 일치하여 정상 동작.
+        //
+        // NON_FINAL: root-level List에 타입 래퍼 미적용 → 바깥 배열 타입 정보 누락
+        // EVERYTHING + WRAPPER_ARRAY: 모든 타입(List 포함)에 타입 래퍼 적용
+        //   → ["java.util.ArrayList", [["com.oliveyoung.sale.dto.ProductResponse", {...}], ...]]
+        //   → 읽기/쓰기 포맷 일치, 역직렬화 성공
         ObjectMapper objectMapper = JsonMapper.builder()
                 .activateDefaultTyping(
                         LaissezFaireSubTypeValidator.instance,
-                        ObjectMapper.DefaultTyping.NON_FINAL,
+                        ObjectMapper.DefaultTyping.EVERYTHING,
                         JsonTypeInfo.As.WRAPPER_ARRAY)
                 .build();
         GenericJackson2JsonRedisSerializer valueSerializer =
