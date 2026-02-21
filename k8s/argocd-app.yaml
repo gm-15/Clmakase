@@ -11,6 +11,7 @@ spec:
     path: k8s
     directory:
       recurse: true
+      exclude: "version-c/**"
   destination:
     server: https://kubernetes.default.svc
     namespace: oliveyoung
