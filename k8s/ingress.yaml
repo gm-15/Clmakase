@@ -2,6 +2,7 @@
 # ALB Ingress
 # AWS Load Balancer Controller가 이 리소스를 감지하여 ALB를 자동 생성
 ################################################################################
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -21,13 +22,11 @@ metadata:
     # Health Check 설정
     alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
     alb.ingress.kubernetes.io/healthcheck-port: "8080"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:160884802838:certificate/e17ae2b5-594c-4d9c-ac3d-0aa090444037
     # 태그
     alb.ingress.kubernetes.io/tags: Project=cloudwave,Environment=dev,ManagedBy=alb-controller
-    # HTTPS 리스너 (80 → 443 리다이렉트)
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
-    alb.ingress.kubernetes.io/ssl-redirect: '443'
-    # ACM 인증서 (*.clmakase.click 와일드카드 포함)
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:160884802838:certificate/e17ae2b5-594c-4d9c-ac3d-0aa090444037
 spec:
   rules:
     - http:
