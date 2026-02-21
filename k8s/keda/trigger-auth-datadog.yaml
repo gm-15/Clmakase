@@ -4,22 +4,12 @@
 ################################################################################
 
 ---
-# Datadog API/APP Key Secret
+# datadog-keda-secret은 GitLab CI deploy-secrets job이 관리합니다.
+# ArgoCD 관리 대상에서 제외 (git에 실제 키를 절대 저장하지 않음)
 # kubectl create secret generic datadog-keda-secret \
 #   --from-literal=apiKey=<DATADOG_API_KEY> \
 #   --from-literal=appKey=<DATADOG_APP_KEY> \
 #   -n oliveyoung
-apiVersion: v1
-kind: Secret
-metadata:
-  name: datadog-keda-secret
-  namespace: oliveyoung
-type: Opaque
-stringData:
-  apiKey: "<DATADOG_API_KEY>"   # Datadog → Organization Settings → API Keys
-  appKey: "<DATADOG_APP_KEY>"   # Datadog → Organization Settings → Application Keys
-
----
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
 metadata:
