@@ -77,13 +77,15 @@ trivy-scan:
 
 deploy-secrets:
   stage: deploy-secrets
-  image:
-    name: bitnami/kubectl:latest
+  image: 
+    name: amazon/aws-cli:latest
     entrypoint: [""]
   before_script:
-    - apt-get update -qq && apt-get install -y -qq curl unzip
-    - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    - unzip -q awscliv2.zip && ./aws/install
+    # kubectl 바이너리 직접 다운로드 (이미지에 패키지 매니저가 없어도 작동하는 가장 확실한 방법)
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - chmod +x ./kubectl
+    - mv ./kubectl /usr/local/bin/kubectl
+    # EKS 인증 업데이트
     - aws eks update-kubeconfig --region $AWS_REGION --name cloudwave-eks
   script:
     - |
