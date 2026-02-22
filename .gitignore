@@ -41,7 +41,7 @@ Thumbs.db
 nul
 
 # Claude 
-.claude/settings.local.json
+.claude/
 
 # Docker
 *.log
