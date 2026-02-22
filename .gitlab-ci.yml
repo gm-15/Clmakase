@@ -90,6 +90,11 @@ deploy-secrets:
     - aws eks update-kubeconfig --region $AWS_REGION --name cloudwave-eks
   script:
     - |
+      # 변수 누락 시 기존 Secret 덮어쓰기 방지
+      if [ -z "$DATADOG_API_KEY" ] || [ -z "$DATADOG_APP_KEY" ]; then
+        echo "❌ DATADOG_API_KEY 또는 DATADOG_APP_KEY 가 비어있습니다. GitLab CI/CD Variables를 확인하세요."
+        exit 1
+      fi
       kubectl create secret generic datadog-keda-secret \
         --namespace oliveyoung \
         --from-literal=apiKey="$DATADOG_API_KEY" \
