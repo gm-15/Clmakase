@@ -63,7 +63,10 @@
       "Bash(git fetch:*)",
       "Bash(for topic in queue-entry-requests order-events queue-entry-requests-retry-0 queue-entry-requests-retry-1 queue-entry-requests-retry-2 queue-entry-requests-dlt order-events-retry-0 order-events-retry-1 order-events-retry-2 order-events-dlt)",
       "Bash(do)",
-      "Bash(__NEW_LINE_40b16b807c5e0e0b__ echo \"=== 세일 시작 ===\")"
+      "Bash(__NEW_LINE_40b16b807c5e0e0b__ echo \"=== 세일 시작 ===\")",
+      "Bash(__NEW_LINE_7a9d8f7d2033f0e2__ aws eks wait nodegroup-deleted --cluster-name clmakase-tokyo --nodegroup-name clmakase-tokyo-ng7 --region ap-northeast-1)",
+      "Bash(__NEW_LINE_7a9d8f7d2033f0e2__ echo \"삭제 완료 - 재생성 시작\")",
+      "Bash(glab pipeline list:*)"
     ]
   }
 }

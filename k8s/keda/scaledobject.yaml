@@ -86,9 +86,9 @@ spec:
         type: global                 # 전체 RPS 합산 기준
         # 최근 60초 평균 RPS 합산 쿼리
         query: "sum:trace.servlet.request.hits{service:oliveyoung-api}.rollup(sum, 60)"
-        queryValue: "100"            # Pod당 처리 가능한 RPS (100 RPS당 Pod 1개)
-        activationQueryValue: "10"   # 10 RPS 미만이면 스케일 인 허용
-        age: "120"                   # 최근 120초 데이터 기준 (너무 짧으면 데이터 부족 오류)
+        queryValue: "10"            # Pod당 처리 가능한 RPS (100 RPS당 Pod 1개)
+        activationQueryValue: "5"   # 10 RPS 미만이면 스케일 인 허용
+        age: "180"                   # 최근 120초 데이터 기준 (너무 짧으면 데이터 부족 오류)
 
     ############################################################################
     # 4. Cron Scaler - 세일 시간대 사전 Pod + 노드 Warm-up
