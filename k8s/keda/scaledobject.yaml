@@ -33,7 +33,7 @@ spec:
     name: oliveyoung-api               # deployment.yaml의 name과 일치
 
   # 스케일링 범위
-  minReplicaCount: 1                   # 항상 최소 1개 유지 (세일 시스템 특성상 0 비권장)
+  minReplicaCount: 2                   # 항상 최소 2개 유지 (HA + deployment 롤링업데이트 충돌 방지)
   maxReplicaCount: 20                  # 노드 리소스 한도 내 최대 Pod 수
 
   # 폴링 및 쿨다운
