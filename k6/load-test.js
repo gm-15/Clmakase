@@ -11,11 +11,12 @@ import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
  */
 export const options = {
     stages: [
-        { duration: '30s', target: 300 },  // 30초 동안 0 → 300명 (급격한 피크)
-        { duration: '3m',  target: 300 },  // 3분간 300명 유지 → Pod Ready 후 트래픽 수신 확인
-        { duration: '30s', target: 200 },  // 30초 동안 300 → 200명 감소
-        { duration: '30s', target: 100 },  // 30초 동안 200 → 100명 감소
-        { duration: '30s', target: 0 },    // 30초 동안 100 → 0명 (쿨다운)
+        { duration: '1m',  target: 100 }, // 1단계: 1분간 100명까지 서서히 증가 (Warm-up)
+        { duration: '1m',  target: 300 }, // 2단계: 피크 트래픽 300명 도달 (KEDA 트리거 발생)
+        { duration: '5m',  target: 300 }, // 3단계: ★핵심★ 5분간 300명 유지 (Pod Ready 및 안정화 관찰)
+        { duration: '1m',  target: 150 }, // 4단계: 부하 절반으로 감소 (Scale-down 준비)
+        { duration: '1m',  target: 50  }, // 5단계: 잔여 트래픽 처리
+        { duration: '1m',  target: 0   }, // 6단계: 종료 및 인프라 쿨다운 관찰
     ],
     thresholds: {
         http_req_duration: ['p(95)<2000'], // 95% 요청이 2000ms 이내 (스케일아웃 고려)
