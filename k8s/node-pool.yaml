@@ -32,6 +32,7 @@ spec:
   disruption:
     # [가용성] 대규모 트래픽 중 노드가 갑자기 삭제되는 것을 방지
     consolidationPolicy: WhenUnderutilized
+    consolidateAfter: 3s
     budgets:
       - nodes: "10%"
       # [안정성] 부하테스트/세일 피크 시간대 노드 교체 금지
