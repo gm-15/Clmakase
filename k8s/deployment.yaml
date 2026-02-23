@@ -68,7 +68,7 @@ spec:
         - name: oliveyoung-api
           # CI/CD에서 sed로 8b95b532를 커밋 SHA로 자동 교체
           # ArgoCD가 이 태그 변경을 감지하여 롤링 업데이트 수행
-          image: 160884802838.dkr.ecr.ap-northeast-2.amazonaws.com/oliveyoung-api:20d84b26
+          image: 160884802838.dkr.ecr.ap-northeast-2.amazonaws.com/oliveyoung-api:158ab2ea
           ports:
             - containerPort: 8080
           env:
