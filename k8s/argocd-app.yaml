@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://gitlab.com/clmakase-group/Clmakase.git
+    repoURL: https://gitlab.com/clmakase_02/clmakase.git
     targetRevision: main
     path: k8s
     directory:
