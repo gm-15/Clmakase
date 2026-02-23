@@ -13,9 +13,9 @@ spec:
       requirements:
         - key: kubernetes.io/arch
           operator: In
-          # [보안/성능] 그래비톤(arm64)을 우선하되,
-          # 이미지 호환성 문제로 배포 실패를 방지하기 위해 amd64를 백업으로 유지합니다.
-          values: ["arm64", "amd64"]
+          # [주의] CI/CD(GitLab)가 amd64 단일 플랫폼 빌드만 수행하므로
+          # arm64 제거 — arm64 노드 스케줄 시 ImagePullBackOff 발생
+          values: ["amd64"]
         - key: karpenter.sh/capacity-type
           operator: In
           # [안정성] 대규모 트래픽 시 스팟 중단(Interruption)을 방지하기 위해
@@ -27,12 +27,20 @@ spec:
           values: ["c", "m", "r"]
         - key: karpenter.k8s.aws/instance-generation
           operator: Gt
-          # [보안] 최신 하드웨어 암호화 기능(Graviton 3, 4)을 위해 6세대 이상만 사용
+          # [보안] 최신 하드웨어 암호화 기능을 위해 6세대 이상만 사용
           values: ["6"]
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          # [30,000 VU] Pod당 4CPU/8Gi 기준 → xlarge(4c/16g) 이상 지정
+          # xlarge: Pod 1~2개, 2xlarge: Pod 2~4개, 4xlarge: Pod 4~8개 수용
+          values: ["xlarge", "2xlarge", "4xlarge"]
+  limits:
+    cpu: "200"
+    memory: "400Gi"
   disruption:
     # [가용성] 대규모 트래픽 중 노드가 갑자기 삭제되는 것을 방지
     consolidationPolicy: WhenUnderutilized
-    consolidateAfter: 3s
+    consolidateAfter: 30s
     budgets:
       - nodes: "10%"
       # [안정성] 부하테스트/세일 피크 시간대 노드 교체 금지

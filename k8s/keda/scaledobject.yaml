@@ -34,7 +34,7 @@ spec:
 
   # 스케일링 범위
   minReplicaCount: 2                   # 항상 최소 2개 유지 (HA + deployment 롤링업데이트 충돌 방지)
-  maxReplicaCount: 20                  # 노드 리소스 한도 내 최대 Pod 수
+  maxReplicaCount: 50                  # 노드 리소스 한도 내 최대 Pod 수 (30,000 VU 부하테스트)
 
   # 폴링 및 쿨다운
   pollingInterval: 15                  # 15초마다 메트릭 수집
@@ -69,10 +69,10 @@ spec:
         bootstrapServers: kafka-0.kafka-headless.oliveyoung.svc.cluster.local:9092,kafka-1.kafka-headless.oliveyoung.svc.cluster.local:9092,kafka-2.kafka-headless.oliveyoung.svc.cluster.local:9092
         consumerGroup: queue-processor-group      # KafkaConsumerService의 group-id
         topic: queue-entry-requests               # QueueService가 produce/consume하는 토픽
-        lagThreshold: "50"        # Pod당 처리 가능한 lag 수 (lag 50개당 Pod 1개)
-        activationLagThreshold: "10"  # lag이 10 미만이면 스케일 인 허용
+        lagThreshold: "20"        # Pod당 처리 가능한 lag 수 (lag 20개당 Pod 1개, 30k VU 대응)
+        activationLagThreshold: "5"   # lag이 5 미만이면 스케일 인 허용
         offsetResetPolicy: latest
-        allowIdleConsumers: "false"   # 파티션 수보다 많은 Pod 생성 방지
+        allowIdleConsumers: "true"    # 파티션(20개) 초과 Pod 생성 허용 (50 replicas 대응)
 
     ############################################################################
     # 3. Datadog Scaler - RPS 기반
@@ -122,4 +122,4 @@ spec:
         timezone: Asia/Seoul
         start: "50 23 * * *"     # ← 세일 시작 10분 전 (수정 필요)
         end: "30 01 * * *"       # ← 세일 종료 후   (수정 필요)
-        desiredReplicas: "10"    # ← 세일 시간대 최소 Pod 수 (수정 필요)
+        desiredReplicas: "20"    # ← 세일 시간대 최소 Pod 수 (30,000 VU 사전 Warm-up)
