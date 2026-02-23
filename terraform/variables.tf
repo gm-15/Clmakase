@@ -116,7 +116,7 @@ variable "eks_node_disk_size" {
 variable "redis_node_type" {
   description = "ElastiCache Redis 노드 타입"
   type        = string
-  default     = "cache.t3.micro"
+  default     = "cache.r7g.large"
 }
 
 variable "alb_domain" {
