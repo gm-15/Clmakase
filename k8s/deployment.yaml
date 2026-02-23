@@ -83,6 +83,8 @@ spec:
               value: "true"
             - name: DD_PROFILING_ENABLED
               value: "true"
+            - name: DD_TRACE_SAMPLE_RATE
+              value: "0.05"  # 1.0(100%)에서 0.05(5%)로 변경 - Datadog APM 비용 절감
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
             - name: KAFKA_BOOTSTRAP_SERVERS

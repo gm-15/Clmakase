@@ -53,6 +53,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
+    // Datadog 로그 인덱싱: JSON 구조화 로그 (MDC 필드 자동 직렬화)
+    // Datadog이 http.status_code, http.duration_ms 등 MDC 필드를 파싱 가능하게 함
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'

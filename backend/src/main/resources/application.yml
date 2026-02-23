@@ -93,14 +93,14 @@ management:
     tags:
       application: ${spring.application.name}
 
-# 로그 패턴 (Datadog 트레이스-로그 연결)
+# 로그 레벨 기본값 (상세 포맷은 logback-spring.xml에서 환경별 관리)
+# - local  : 텍스트 컬러 출력 (logback-spring.xml 참고)
+# - prod   : JSON 구조화 출력 → Datadog 파이프라인 파싱 (logback-spring.xml 참고)
 logging:
   level:
     root: INFO
     org.springframework.web: INFO
     org.hibernate.SQL: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} [dd.service=%X{dd.service} dd.trace_id=%X{dd.trace_id} dd.span_id=%X{dd.span_id}] - %msg%n"
 
 # 애플리케이션 설정
 app:

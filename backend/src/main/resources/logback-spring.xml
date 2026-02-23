@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <!--
+  ============================================================
+  logback-spring.xml - 환경별 로깅 전략
+  ============================================================
+  [local]        → 텍스트 포맷 (사람이 읽기 편한 컬러 출력)
+  [prod/version-c] → JSON 포맷 (Datadog 파이프라인 파싱용)
+
+  [JSON 로그 구조]
+  LogstashEncoder가 MDC 필드를 JSON 최상위 속성으로 자동 직렬화:
+  {
+    "timestamp": "2025-01-01T00:00:00.000Z",
+    "level": "INFO",
+    "message": "[ACCESS] GET /api/v1/products → 200 (45ms)",
+    "logger.name": "c.o.s.filter.LoggingFilter",
+    "http.method": "GET",
+    "http.url": "/api/v1/products",
+    "http.status_code": "200",
+    "http.duration_ms": "45",
+    "http.client_ip": "1.2.3.4",
+    "dd.trace_id": "...",
+    "dd.span_id": "...",
+    "dd.service": "oliveyoung-api"
+  }
+
+  [Datadog 파이프라인 설정 가이드]
+  Datadog > Logs > Pipelines 에서 아래 규칙 설정:
+    Index 1: level:error OR level:warn                    → 100% Index (에러/슬로우)
+    Index 2: @http.status_code:(4* OR 5*)                 → 100% Index (HTTP 에러)
+    Index 3: @http.duration_ms:[3000 TO *]                → 100% Index (슬로우 쿼리)
+    Exclusion Filter: level:info AND @http.status_code:2* → Drop (정상 200 로그)
+  ============================================================
+  -->
+
+  <!-- ============================================================ -->
+  <!-- PROD / VERSION-C: Datadog용 JSON 구조화 로그                  -->
+  <!-- ============================================================ -->
+  <springProfile name="prod,version-c">
+
+    <appender name="JSON_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <!--
+          LogstashEncoder 기본 동작:
+          - timestamp, level, message, logger.name, thread 자동 포함
+          - MDC 필드 전체 JSON 최상위 레벨에 자동 포함
+          - Datadog APM이 주입하는 dd.trace_id, dd.span_id도 MDC 경유 자동 포함
+        -->
+
+        <!-- Datadog 표준 필드명에 맞춰 매핑 -->
+        <fieldNames>
+          <timestamp>timestamp</timestamp>
+          <message>message</message>
+          <logger>logger.name</logger>
+          <level>level</level>
+          <levelValue>[ignore]</levelValue>
+          <thread>logger.thread_name</thread>
+          <stackTrace>error.stack</stackTrace>
+        </fieldNames>
+
+        <!-- 예외 스택트레이스: Datadog error tracking에 사용 -->
+        <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+          <maxDepthPerCause>20</maxDepthPerCause>
+          <shortenedClassNameLength>20</shortenedClassNameLength>
+          <rootCauseFirst>true</rootCauseFirst>
+        </throwableConverter>
+      </encoder>
+    </appender>
+
+    <root level="INFO">
+      <appender-ref ref="JSON_STDOUT"/>
+    </root>
+
+    <!-- 애플리케이션 로그: INFO 이상 -->
+    <logger name="com.oliveyoung" level="INFO"/>
+    <!-- Spring Web: WARN 이상 (prod에서 불필요한 요청 매핑 로그 제거) -->
+    <logger name="org.springframework.web" level="WARN"/>
+    <!-- Hibernate SQL: 비활성화 (prod 환경 성능 + 보안) -->
+    <logger name="org.hibernate.SQL" level="WARN"/>
+    <!-- Kafka: 브로커 연결 오류만 -->
+    <logger name="org.apache.kafka" level="WARN"/>
+
+  </springProfile>
+
+  <!-- ============================================================ -->
+  <!-- LOCAL: 개발용 텍스트 컬러 로그                                 -->
+  <!-- ============================================================ -->
+  <springProfile name="local">
+
+    <appender name="TEXT_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <!--
+          [MDC 필드 표시 순서]
+          method url → status_code duration_ms | trace_id | message
+          예: 12:34:56.789 INFO  LoggingFilter [GET /api/v1/products → 200 45ms] [ACCESS] ...
+        -->
+        <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%-40logger{40}) [%boldYellow(%X{http.method}) %X{http.url} → %boldGreen(%X{http.status_code}) %X{http.duration_ms}ms] - %msg%n%ex</pattern>
+      </encoder>
+    </appender>
+
+    <root level="INFO">
+      <appender-ref ref="TEXT_STDOUT"/>
+    </root>
+
+    <!-- 로컬 개발 시 애플리케이션 로그는 DEBUG까지 -->
+    <logger name="com.oliveyoung" level="DEBUG"/>
+    <logger name="org.springframework.web" level="INFO"/>
+    <logger name="org.hibernate.SQL" level="INFO"/>
+
+  </springProfile>
+
+</configuration>
