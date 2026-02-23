@@ -34,3 +34,8 @@ spec:
     consolidationPolicy: WhenUnderutilized
     budgets:
       - nodes: "10%"
+      # [안정성] 부하테스트/세일 피크 시간대 노드 교체 금지
+      # Kafka 브로커가 올라타 있는 노드가 교체되지 않도록 보호
+      - schedule: "50 23 * * *"   # 23:50 ~ 01:30 (세일 시간대)
+        duration: 100m             # 1시간 40분 동안 교체 0개
+        nodes: "0"

@@ -182,3 +182,19 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
+
+---
+# Kafka PodDisruptionBudget
+# Karpenter 노드 교체 or Spot 인터럽션 시에도 최소 2개 브로커 보호
+# min.insync.replicas=2 이므로 1개가 내려가도 클러스터는 동작 가능
+# 단, 2개가 동시에 내려가면 클러스터 중단 → minAvailable: 2로 방지
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kafka-pdb
+  namespace: oliveyoung
+spec:
+  minAvailable: 2          # 항상 브로커 최소 2개 유지
+  selector:
+    matchLabels:
+      app: kafka

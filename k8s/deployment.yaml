@@ -127,3 +127,17 @@ spec:
             initialDelaySeconds: 120
             periodSeconds: 15
             failureThreshold: 5
+
+---
+# API PodDisruptionBudget
+# 노드 교체 시 최소 1개 API 파드 항상 유지 (HA 보장)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: oliveyoung-api-pdb
+  namespace: oliveyoung
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: oliveyoung-api
