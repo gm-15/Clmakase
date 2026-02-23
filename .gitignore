@@ -47,4 +47,4 @@ nul
 *.log
 
 # Argo CLI
-argocd
+argocd.exe
