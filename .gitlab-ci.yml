@@ -88,8 +88,9 @@ update-manifest:
   script:
     - git fetch origin main
     - git checkout main
-    - sed -i "s/TAG_PLACEHOLDER/${IMAGE_TAG}/g" k8s/deployment.yaml
+    - sed -i "s|image:.*oliveyoung-api:.*|image: 160884802838.dkr.ecr.ap-northeast-2.amazonaws.com/oliveyoung-api:${IMAGE_TAG}|" k8s/deployment.yaml
     - git add k8s/deployment.yaml
+    - git diff --cached --quiet && echo "No changes" && exit 0
     - 'git commit -m "ci: update image tag to ${IMAGE_TAG} [skip ci]"'
     - git push origin main
   only:
