@@ -22,7 +22,7 @@ spec:
         tags.datadoghq.com/service: "oliveyoung-api"
         tags.datadoghq.com/version: "1.0.0"
       annotations:
-        # --- Prometheus ---
+        # --- Prometheus ----
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/actuator/prometheus"
