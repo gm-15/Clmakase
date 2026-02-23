@@ -66,9 +66,9 @@ spec:
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: oliveyoung-api
-          # CI/CD에서 sed로 TAG_PLACEHOLDER를 커밋 SHA로 자동 교체
+          # CI/CD에서 sed로 8b95b532를 커밋 SHA로 자동 교체
           # ArgoCD가 이 태그 변경을 감지하여 롤링 업데이트 수행
-          image: 160884802838.dkr.ecr.ap-northeast-2.amazonaws.com/oliveyoung-api:TAG_PLACEHOLDER
+          image: 160884802838.dkr.ecr.ap-northeast-2.amazonaws.com/oliveyoung-api:8b95b532
           ports:
             - containerPort: 8080
           env:
