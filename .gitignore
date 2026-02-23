@@ -45,3 +45,6 @@ nul
 
 # Docker
 *.log
+
+# Argo CLI
+argocd
