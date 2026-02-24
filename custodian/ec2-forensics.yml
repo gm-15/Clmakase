@@ -1,0 +1,28 @@
+policies:
+  - name: ec2-isolated-snapshot
+    resource: ec2
+    description: |
+      Status=isolated 태그가 달린 EC2 인스턴스를 감지하면
+      EBS 볼륨 스냅샷을 자동으로 생성해 포렌식 증거를 보존한다.
+    mode:
+      type: cloudtrail
+      role: arn:aws:iam::160884802838:role/EC2CustodianRole
+      events:
+        - source: ec2.amazonaws.com
+          event: CreateTags
+          ids: "requestParameters.resourcesSet.items[].resourceId"
+    filters:
+      - type: value
+        key: "Tags[?Key=='Status'].Value | [0]"
+        value: isolated
+        op: eq
+    actions:
+      - type: snapshot
+        copy-tags:
+          - Name
+          - Status
+          - IsolatedBy
+      - type: tag
+        tags:
+          SnapshotStatus: completed
+          ForensicsBy: custodian-ec2-forensics
