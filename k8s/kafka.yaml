@@ -138,6 +138,13 @@ spec:
       containers:
         - name: kafka
           image: confluentinc/cp-kafka:7.5.0
+          # BROKER_ID를 hostname ordinal(0,1,2)로 고정: 재시작 시 ID 변경 방지
+          command:
+            - sh
+            - -c
+            - |
+              export KAFKA_BROKER_ID=${HOSTNAME##*-}
+              exec /etc/confluent/docker/run
           ports:
             - containerPort: 9092
           env:
@@ -146,9 +153,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            # BROKER_ID: hostname에서 ordinal 추출 (kafka-0 → 0)
-            - name: KAFKA_BROKER_ID_COMMAND
-              value: "echo ${HOSTNAME##*-}"
             - name: KAFKA_ZOOKEEPER_CONNECT
               value: "zookeeper.oliveyoung.svc.cluster.local:2181"
             - name: KAFKA_LISTENERS

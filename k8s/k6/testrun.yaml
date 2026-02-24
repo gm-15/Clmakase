@@ -11,8 +11,7 @@
 #      helm install k6-operator grafana/k6-operator -n k6-operator --create-namespace
 #
 #   2. ConfigMap 및 TestRun 적용:
-#      kubectl apply -f k8s/k6/configmap.yaml   # oliveyoung 네임스페이스
-#      kubectl apply -f k8s/k6/testrun.yaml     # k6-operator 네임스페이스
+#      kubectl apply -f k8s/k6/   # 둘 다 k6-operator 네임스페이스
 #
 # [진행 상태 확인]
 #   kubectl get testrun -n k6-operator
@@ -30,10 +29,8 @@ spec:
 
   script:
     configMap:
-      name: k6-load-test-script   # k8s/k6/configmap.yaml의 name
+      name: k6-load-test-script   # k6-operator 네임스페이스의 ConfigMap
       file: load-test.js
-      # ConfigMap은 oliveyoung 네임스페이스에 있으므로 참조 네임스페이스 명시
-      namespace: oliveyoung
 
   arguments: "--env BASE_URL=https://api.clmakase.click"
 
@@ -50,5 +47,5 @@ spec:
       - name: BASE_URL
         value: "https://api.clmakase.click"
 
-  # 테스트 완료 후 Job/Pod 자동 정리 (초)
-  cleanup: "ttlSecondsAfterFinished"
+  # 테스트 완료 후 Job/Pod 자동 정리
+  cleanup: "post"
