@@ -1,0 +1,98 @@
+{
+  "policy": {
+    "name": "ec2-isolated-snapshot",
+    "resource": "ec2",
+    "description": "Status=isolated \ud0dc\uadf8\uac00 \ub2ec\ub9b0 EC2 \uc778\uc2a4\ud134\uc2a4\ub97c \uac10\uc9c0\ud558\uba74\nEBS \ubcfc\ub968 \uc2a4\ub0c5\uc0f7\uc744 \uc790\ub3d9\uc73c\ub85c \uc0dd\uc131\ud574 \ud3ec\ub80c\uc2dd \uc99d\uac70\ub97c \ubcf4\uc874\ud55c\ub2e4.\n",
+    "mode": {
+      "type": "cloudtrail",
+      "role": "arn:aws:iam::160884802838:role/EC2CustodianRole",
+      "events": [
+        {
+          "source": "ec2.amazonaws.com",
+          "event": "CreateTags",
+          "ids": "requestParameters.resourcesSet.items[].resourceId"
+        }
+      ],
+      "tags": {
+        "custodian-info": "mode=cloudtrail:version=0.9.49"
+      }
+    },
+    "filters": [
+      {
+        "type": "value",
+        "key": "Tags[?Key=='Status'].Value | [0]",
+        "value": "isolated",
+        "op": "eq"
+      }
+    ],
+    "actions": [
+      {
+        "type": "snapshot",
+        "copy-tags": [
+          "Name",
+          "Status",
+          "IsolatedBy"
+        ]
+      },
+      {
+        "type": "tag",
+        "tags": {
+          "SnapshotStatus": "completed",
+          "ForensicsBy": "custodian-ec2-forensics"
+        }
+      }
+    ]
+  },
+  "version": "0.9.49",
+  "execution": {
+    "id": "b8039779-adc4-4033-aeb5-ab70616ec550",
+    "start": 1771926735.726448,
+    "end_time": 1771926751.95908,
+    "duration": 16.23263192176819
+  },
+  "config": {
+    "region": "ap-northeast-2",
+    "regions": [
+      "ap-northeast-2"
+    ],
+    "cache": "~/.cache/cloud-custodian.cache",
+    "profile": null,
+    "account_id": "160884802838",
+    "assume_role": null,
+    "session_policy": null,
+    "external_id": null,
+    "log_group": null,
+    "tracer": null,
+    "metrics_enabled": null,
+    "metrics": null,
+    "output_dir": "C:/Users/KDT49/Clmakase/custodian/output",
+    "cache_period": 15,
+    "dryrun": false,
+    "authorization_file": null,
+    "subparser": "run",
+    "config": null,
+    "configs": [
+      "C:/Users/KDT49/Clmakase/custodian/ec2-forensics.yml"
+    ],
+    "policy_filters": [],
+    "resource_types": [],
+    "verbose": null,
+    "quiet": null,
+    "debug": false,
+    "skip_validation": false,
+    "command": "c7n.commands.run",
+    "vars": null
+  },
+  "sys-stats": {},
+  "api-stats": {
+    "lambda.GetFunction": 1,
+    "lambda.CreateFunction": 1,
+    "lambda.GetFunctionConfiguration": 2,
+    "events.DescribeRule": 1,
+    "events.PutRule": 1,
+    "lambda.AddPermission": 1,
+    "events.ListTargetsByRule": 1,
+    "events.PutTargets": 1
+  },
+  "metrics": []
+}

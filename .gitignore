@@ -47,4 +47,6 @@ nul
 *.log
 
 # Argo CLI
-argocd.exe
+argocd
+
+testrun.yaml
