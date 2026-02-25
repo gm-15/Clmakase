@@ -31,9 +31,11 @@ test:
       - backend/build/reports/tests/
     expire_in: 7 days
   allow_failure: true
-  only:
-    - main
-    - merge_requests
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 build:
   stage: build
@@ -51,8 +53,10 @@ build:
     - docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
     - docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
     - docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-  only:
-    - main
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
 
 trivy-scan:
   stage: scan
@@ -75,8 +79,10 @@ trivy-scan:
       - trivy-report.json
     expire_in: 30 days
   allow_failure: true
-  only:
-    - main
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
 
 update-manifest:
   stage: update-manifest
@@ -94,24 +100,23 @@ update-manifest:
     - git diff --cached --quiet && echo "No changes" && exit 0
     - 'git commit -m "ci: update image tag to ${IMAGE_TAG} [skip ci]"'
     - git push origin main
-  only:
-    - main
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
 
 deploy-secrets:
   stage: deploy-secrets
-  image: 
+  image:
     name: amazon/aws-cli:latest
     entrypoint: [""]
   before_script:
-    # kubectl 바이너리 직접 다운로드 (이미지에 패키지 매니저가 없어도 작동하는 가장 확실한 방법)
     - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
     - chmod +x ./kubectl
     - mv ./kubectl /usr/local/bin/kubectl
-    # EKS 인증 업데이트
     - aws eks update-kubeconfig --region $AWS_REGION --name cloudwave-eks
   script:
     - |
-      # 변수 누락 시 기존 Secret 덮어쓰기 방지
       if [ -z "$DATADOG_API_KEY" ] || [ -z "$DATADOG_APP_KEY" ]; then
         echo "❌ DATADOG_API_KEY 또는 DATADOG_APP_KEY 가 비어있습니다. GitLab CI/CD Variables를 확인하세요."
         exit 1
@@ -122,8 +127,10 @@ deploy-secrets:
         --from-literal=appKey="$DATADOG_APP_KEY" \
         --dry-run=client -o yaml | kubectl apply -f -
     - echo "✅ datadog-keda-secret 갱신 완료"
-  only:
-    - main
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
 
 deploy-frontend:
   stage: deploy-frontend
@@ -140,8 +147,10 @@ deploy-frontend:
     paths:
       - frontend/dist/
     expire_in: 1 day
-  only:
-    - main
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
 
 load-test:
   stage: load-test
@@ -157,9 +166,11 @@ load-test:
     paths:
       - k6-summary.json
     expire_in: 7 days
-  when: manual
-  only:
-    - main
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
 
 # ------------------------------------------------------------------------------
 # Renovate - 의존성 자동 업데이트 MR 생성
