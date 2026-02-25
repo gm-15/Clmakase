@@ -2,11 +2,14 @@ package com.oliveyoung.sale.config;
 
 import com.oliveyoung.sale.domain.Product;
 import com.oliveyoung.sale.repository.ProductRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -22,7 +25,11 @@ public class DataInitializer implements CommandLineRunner {
 
     private final ProductRepository productRepository;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Override
+    @Transactional
     public void run(String... args) {
         if (productRepository.count() > 0) {
             log.info("이미 데이터가 존재합니다. 초기화 스킵.");
@@ -36,7 +43,7 @@ public class DataInitializer implements CommandLineRunner {
                         .originalPrice(new BigDecimal("18000"))
                         .discountRate(30)
                         .stock(100)
-                        .imageUrl("https://via.placeholder.com/300x300/FFB6C1/000000?text=Tint")
+                        .imageUrl("https://placehold.co/300x300/FFB6C1/333333?text=Tint")
                         .category("립메이크업")
                         .build(),
 
@@ -46,7 +53,7 @@ public class DataInitializer implements CommandLineRunner {
                         .originalPrice(new BigDecimal("23000"))
                         .discountRate(35)
                         .stock(150)
-                        .imageUrl("https://via.placeholder.com/300x300/87CEEB/000000?text=Toner")
+                        .imageUrl("https://placehold.co/300x300/87CEEB/333333?text=Toner")
                         .category("스킨케어")
                         .build(),
 
@@ -56,7 +63,7 @@ public class DataInitializer implements CommandLineRunner {
                         .originalPrice(new BigDecimal("12000"))
                         .discountRate(25)
                         .stock(200)
-                        .imageUrl("https://via.placeholder.com/300x300/F0E68C/000000?text=Powder")
+                        .imageUrl("https://placehold.co/300x300/F0E68C/333333?text=Powder")
                         .category("베이스메이크업")
                         .build(),
 
@@ -66,7 +73,7 @@ public class DataInitializer implements CommandLineRunner {
                         .originalPrice(new BigDecimal("28000"))
                         .discountRate(40)
                         .stock(80)
-                        .imageUrl("https://via.placeholder.com/300x300/98FB98/000000?text=Serum")
+                        .imageUrl("https://placehold.co/300x300/98FB98/333333?text=Serum")
                         .category("스킨케어")
                         .build(),
 
@@ -76,7 +83,7 @@ public class DataInitializer implements CommandLineRunner {
                         .originalPrice(new BigDecimal("32000"))
                         .discountRate(30)
                         .stock(120)
-                        .imageUrl("https://via.placeholder.com/300x300/DDA0DD/000000?text=Foundation")
+                        .imageUrl("https://placehold.co/300x300/DDA0DD/333333?text=Foundation")
                         .category("베이스메이크업")
                         .build(),
 
@@ -86,7 +93,7 @@ public class DataInitializer implements CommandLineRunner {
                         .originalPrice(new BigDecimal("25000"))
                         .discountRate(35)
                         .stock(90)
-                        .imageUrl("https://via.placeholder.com/300x300/FFD700/000000?text=Palette")
+                        .imageUrl("https://placehold.co/300x300/FFD700/333333?text=Palette")
                         .category("아이메이크업")
                         .build(),
 
@@ -96,7 +103,7 @@ public class DataInitializer implements CommandLineRunner {
                         .originalPrice(new BigDecimal("19000"))
                         .discountRate(20)
                         .stock(180)
-                        .imageUrl("https://via.placeholder.com/300x300/FFC0CB/000000?text=Mist")
+                        .imageUrl("https://placehold.co/300x300/FFC0CB/333333?text=Mist")
                         .category("스킨케어")
                         .build(),
 
@@ -106,12 +113,19 @@ public class DataInitializer implements CommandLineRunner {
                         .originalPrice(new BigDecimal("21000"))
                         .discountRate(30)
                         .stock(160)
-                        .imageUrl("https://via.placeholder.com/300x300/FFFACD/000000?text=Sunscreen")
+                        .imageUrl("https://placehold.co/300x300/FFFACD/333333?text=Sunscreen")
                         .category("선케어")
                         .build()
         );
 
         productRepository.saveAll(products);
         log.info("✅ 초기 상품 데이터 {}개 생성 완료", products.size());
+
+        // 주문번호 시작값을 실서비스처럼 높게 설정 (시연용)
+        // 대기열 번호(~14000대)와 어울리는 누적 주문 규모 연출
+        entityManager.createNativeQuery(
+                "ALTER TABLE purchase_orders ALTER COLUMN id RESTART WITH 204871"
+        ).executeUpdate();
+        log.info("✅ 주문번호 시퀀스 시작값 설정 완료 (204871~)");
     }
 }

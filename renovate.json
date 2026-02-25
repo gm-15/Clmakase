@@ -1,0 +1,86 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Renovate - 자동 의존성 업데이트 (보안 패치 MR 자동 생성)",
+  "extends": [
+    "config:recommended"
+  ],
+
+  "timezone": "Asia/Seoul",
+  "schedule": ["before 9am on Monday"],
+
+  "labels": ["dependencies", "renovate"],
+  "assignees": [],
+  "reviewers": [],
+
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security", "renovate"],
+    "schedule": ["at any time"]
+  },
+
+  "packageRules": [
+    {
+      "description": "Gradle - Spring Boot / Spring Cloud BOM (메이저 업그레이드는 수동 검토)",
+      "matchManagers": ["gradle", "gradle-wrapper"],
+      "matchPackagePatterns": ["^org\\.springframework"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Gradle - 패치/마이너 보안 업데이트는 자동 MR",
+      "matchManagers": ["gradle", "gradle-wrapper"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": false,
+      "groupName": "Gradle dependencies (patch/minor)"
+    },
+    {
+      "description": "npm - 패치/마이너 보안 업데이트",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": false,
+      "groupName": "npm dependencies (patch/minor)"
+    },
+    {
+      "description": "npm - 메이저 업그레이드는 수동 검토",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Docker 베이스 이미지 업데이트 (eclipse-temurin, gradle)",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": false,
+      "groupName": "Docker base images"
+    },
+    {
+      "description": "Terraform AWS 프로바이더 - 패치만 자동 MR",
+      "matchManagers": ["terraform"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": false,
+      "groupName": "Terraform providers (patch)"
+    }
+  ],
+
+  "gradle": {
+    "fileMatch": ["(^|/)build\\.gradle$"]
+  },
+
+  "npm": {
+    "fileMatch": ["(^|/)package\\.json$"]
+  },
+
+  "dockerfile": {
+    "fileMatch": ["(^|/)Dockerfile$"]
+  },
+
+  "terraform": {
+    "fileMatch": ["\\.tf$"]
+  },
+
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "separateMajorMinor": true,
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Renovate Dependency Dashboard"
+}

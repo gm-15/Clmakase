@@ -32,7 +32,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Profile("!version-c")
+@Profile("!version-c & !local")
 public class QueueService implements QueueOperations {
 
     private static final String QUEUE_KEY = "purchase:queue";
@@ -127,7 +127,7 @@ public class QueueService implements QueueOperations {
      *    실제로는 DB 응답 시간, 에러율을 모니터링하며
      *    동적으로 조절하는 Adaptive Rate Limiting도 고려할 수 있습니다.
      */
-    @Scheduled(fixedRate = 1000) // 1초마다 실행
+    @Scheduled(fixedRate = 3000) // 3초마다 실행
     public void processQueue() {
         ZSetOperations<String, Object> zSetOps = redisTemplate.opsForZSet();
 
@@ -160,8 +160,8 @@ public class QueueService implements QueueOperations {
      * 예상 대기 시간 계산 (초)
      */
     private int estimateWaitTime(int position) {
-        // 초당 10명 처리 가정
-        return (int) Math.ceil(position / 10.0);
+        // 3초마다 10명 처리 → 1명당 약 0.3초, position 기준 3초 단위 반올림
+        return (int) Math.ceil(position / 10.0) * 3;
     }
 
 }
