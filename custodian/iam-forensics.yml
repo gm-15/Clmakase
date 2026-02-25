@@ -1,0 +1,27 @@
+policies:
+  - name: iam-isolated-collect
+    resource: iam-user
+    description: |
+      Status=isolated 태그가 달린 IAM 유저를 감지하면
+      유저 상태(정책, 액세스 키 목록)를 수집해 S3에 저장한다.
+    mode:
+      type: cloudtrail
+      role: arn:aws:iam::160884802838:role/IAMCustodianRole
+      events:
+        - source: iam.amazonaws.com
+          event: TagUser
+          ids: "requestParameters.userName"
+    filters:
+      - type: value
+        key: "Tags[?Key=='Status'].Value | [0]"
+        value: isolated
+        op: eq
+    actions:
+      - type: notify
+        to:
+          - s3://security-forensics/iam-forensics/{account_id}/{now:%Y-%m-%d}/{resource[UserName]}.json
+        transport:
+          type: s3
+          bucket: security-forensics
+          prefix: iam-forensics
+
