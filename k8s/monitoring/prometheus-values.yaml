@@ -1,0 +1,96 @@
+################################################################################
+# Prometheus - Kiali 전용 Istio 메트릭 수집기
+#
+# [역할 구분]
+# - Datadog: APM 트레이스, 로그, 인프라 메트릭 수집 (기존 운영 도구)
+# - 이 Prometheus: Istio 서비스 메시 메트릭 전용 (Kiali 의존성)
+#   → Kiali가 서비스 토폴로지 그래프 렌더링 시 Prometheus 쿼리 필수
+#   → Datadog과 완전 독립적으로 동작, 충돌 없음
+#
+# [최소 구성 전략]
+# - alertmanager DISABLE: 알림은 Datadog이 담당 → 중복 제거
+# - pushgateway DISABLE: 배치 잡 존재하지 않음
+# - persistentVolume DISABLE: 메시 가시화용이므로 재시작 시 초기화 허용
+#   (Kiali 트래픽 그래프는 실시간 데이터 기반, 히스토리 불필요)
+#
+# [배포 위치: istio-system]
+# - Kiali와 같은 네임스페이스 → 내부 DNS 단순화
+#   http://prometheus-server.istio-system.svc.cluster.local:80
+# - 별도 monitoring 네임스페이스 불필요 (운영 Prometheus 아님)
+#
+# [scrape 설정]
+# - prometheus.io/scrape: "true" 어노테이션 기반 자동 수집
+# - oliveyoung-api의 /actuator/prometheus (포트 8080) 포함
+# - Istio 사이드카(Envoy) 메트릭: 포트 15090 자동 수집
+# - scrape_interval 15s: Kiali 트래픽 맵 실시간성 확보
+################################################################################
+
+# 불필요한 컴포넌트 비활성화
+alertmanager:
+  enabled: false   # Datadog이 알림 담당 → 중복 제거
+
+pushgateway:
+  enabled: false   # 배치 잡 없음
+
+# Prometheus Server 설정
+server:
+  # Kiali 전용이므로 영구 스토리지 불필요
+  persistentVolume:
+    enabled: false   # 재시작 시 메트릭 초기화 허용 (실시간 메시 가시화 목적)
+
+  # 리소스: EKS 노드 부하 최소화
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # 보존 기간: Kiali 실시간 그래프용 → 짧게 유지
+  retention: "6h"
+
+  # Istio + 앱 메트릭 수집 설정
+  global:
+    scrape_interval: 15s       # 15초 간격 (Kiali 실시간성)
+    evaluation_interval: 15s
+
+  # Istio Envoy 사이드카 메트릭 수집을 위한 추가 scrape 설정
+  extraScrapeConfigs: |
+    # Istio 컨트롤 플레인 메트릭 (istiod)
+    - job_name: 'istio-mesh'
+      kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+              - istio-system
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: istio-telemetry;prometheus
+
+    # Envoy 사이드카 메트릭 (oliveyoung 네임스페이스)
+    # 각 Pod의 포트 15090(Envoy admin)에서 Istio 메트릭 수집
+    - job_name: 'envoy-stats'
+      metrics_path: /stats/prometheus
+      kubernetes_sd_configs:
+        - role: pod
+          namespaces:
+            names:
+              - oliveyoung
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_container_port_name]
+          action: keep
+          regex: '.*-envoy-prom'
+
+    # istiod 컨트롤 플레인 자체 메트릭
+    - job_name: 'istiod'
+      kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+              - istio-system
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: istiod;http-monitoring

@@ -1,0 +1,53 @@
+################################################################################
+# Kiali - Istio 서비스 메시 시각화 대시보드
+#
+# [주요 기능]
+# - 서비스 토폴로지 그래프: oliveyoung-api ↔ kafka 트래픽 흐름 시각화
+# - mTLS 상태 표시: 서비스 간 연결에 자물쇠 아이콘으로 암호화 여부 표시
+# - Circuit Breaker 상태: outlierDetection 발동 시 번개 아이콘 표시
+# - AuthorizationPolicy 시각화: deny-all 정책 적용 범위 확인
+# - 트래픽 메트릭: RPS, 에러율(%), 레이턴시(P50/P90/P99) 실시간 표시
+#
+# [auth.strategy: anonymous]
+# - kubectl port-forward 로컬 접속용 → 별도 로그인 불필요
+# - 클러스터 외부 노출 없음 (LoadBalancer 없이 port-forward만 사용)
+# - 프로덕션 전환 시 openid 또는 token 전략 권장
+#
+# [Prometheus 연동]
+# - Kiali 전용 Prometheus (istio-system 내부 DNS)
+# - Datadog과 역할 분리:
+#   Datadog → APM 트레이스, 인프라 메트릭, 알림
+#   Kiali+Prometheus → Istio 메시 레이어 가시화
+#
+# [배포 위치: istio-system]
+# - Istio 컨트롤 플레인(istiod)과 같은 네임스페이스
+# - Istio CRD(VirtualService, DestinationRule 등) 직접 조회 가능
+################################################################################
+
+# 인증 전략: 포트포워딩 로컬 접속 → 인증 생략
+auth:
+  strategy: "anonymous"   # 프로덕션 전환 시 openid/token으로 변경
+
+# 외부 서비스 연동
+external_services:
+  # Prometheus: Kiali 전용 인스턴스 (istio-system 내부)
+  prometheus:
+    url: "http://prometheus-server.istio-system.svc.cluster.local:80"
+
+  # Grafana: 현재 미사용 (Datadog 대시보드로 대체)
+  grafana:
+    enabled: false
+
+  # Tracing: Datadog APM 사용 중 → Jaeger 불필요
+  tracing:
+    enabled: false
+
+# 리소스: 시각화 도구이므로 경량 유지
+deployment:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
