@@ -43,6 +43,13 @@ spec:
               ]
             }
           ]
+        # --- Istio Envoy 사이드카 리소스 제한 ---
+        # proxyCPULimit 500m: 30,000 VU 부하테스트 시 Envoy CPU throttling 방지
+        # KEDA 최대 20개 Pod 스케일링 기준 Pod당 ~700 RPS 처리 가능
+        sidecar.istio.io/proxyCPU: "100m"
+        sidecar.istio.io/proxyMemory: "128Mi"
+        sidecar.istio.io/proxyCPULimit: "500m"
+        sidecar.istio.io/proxyMemoryLimit: "256Mi"
         # --- Datadog 메트릭 수집 ---
         ad.datadoghq.com/oliveyoung-api.check_names: '["openmetrics"]'
         ad.datadoghq.com/oliveyoung-api.init_configs: '[{}]'

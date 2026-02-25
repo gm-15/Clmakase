@@ -5,3 +5,4 @@ metadata:
   labels:
     app: oliveyoung
     environment: dev
+    istio-injection: enabled   # Envoy 사이드카 자동 주입 활성화

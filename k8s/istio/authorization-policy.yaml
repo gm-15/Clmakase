@@ -1,0 +1,62 @@
+################################################################################
+# AuthorizationPolicy - 서비스 접근 제어 (Zero Trust)
+#
+# [기본 원칙]
+# - deny-all: 명시적 허용 없으면 전부 차단 (묵시적 허용 없음)
+# - oliveyoung-api-allow: 허용된 트래픽 소스만 명시
+#
+# [허용 대상]
+# 1. ALB → oliveyoung-api (포트 8080)
+#    ALB는 Istio 메시 외부 → mTLS principal 없음 → 포트 기반 허용
+#
+# 2. datadog 네임스페이스 → oliveyoung-api (APM, 메트릭 수집)
+#    Datadog Agent가 Pod에 직접 접근하여 메트릭 스크래핑
+#
+# 3. keda 네임스페이스 → oliveyoung-api (스케일링 메트릭 조회)
+#    KEDA Operator가 Datadog RPS 메트릭 기반 스케일링 판단 시 참조
+#
+# [마이크로서비스 추가 시 확장 방법]
+# 아래 패턴으로 새 서비스 추가:
+#   - from:
+#       - source:
+#           principals: ["cluster.local/ns/oliveyoung/sa/<serviceaccount-name>"]
+################################################################################
+---
+# 기본 정책: oliveyoung 네임스페이스 전체 Deny
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: oliveyoung
+spec: {}   # selector 없음 = 네임스페이스 전체 / rules 없음 = 전체 Deny
+---
+# oliveyoung-api 허용 정책
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: oliveyoung-api-allow
+  namespace: oliveyoung
+spec:
+  selector:
+    matchLabels:
+      app: oliveyoung-api
+  action: ALLOW
+  rules:
+    # ALB 외부 트래픽 허용 (사이드카 없는 외부 소스)
+    - to:
+        - operation:
+            ports: ["8080"]
+    # Datadog Agent 허용 (메트릭/APM 수집)
+    - from:
+        - source:
+            namespaces: ["datadog"]
+      to:
+        - operation:
+            ports: ["8080", "15020"]   # 15020: Envoy 메트릭 포트
+    # KEDA 허용 (스케일링 메트릭 조회)
+    - from:
+        - source:
+            namespaces: ["keda"]
+      to:
+        - operation:
+            ports: ["8080"]

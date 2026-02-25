@@ -1,0 +1,63 @@
+################################################################################
+# DestinationRule - 트래픽 정책 및 mTLS 설정
+#
+# [oliveyoung-api]
+# - ISTIO_MUTUAL: Envoy 사이드카 간 자동 mTLS (인증서 자동 관리)
+# - connectionPool: 이벤트 트래픽 스파이크 시 연결 폭주 방지
+# - outlierDetection (Circuit Breaker):
+#   연속 5회 5xx 에러 → 해당 Pod 30초 격리 → 50% 이상 격리 방지
+#   → 마이크로서비스 추가 시 cascading failure 방어선 역할
+#
+# [Kafka / Zookeeper]
+# - DISABLE: 사이드카 미주입 서비스 → mTLS 강제 시 통신 단절
+#   oliveyoung-api가 Kafka 브로커로 메시지 전송할 때
+#   Envoy가 mTLS를 시도하면 Kafka가 평문 응답 → 연결 실패
+#   명시적 DISABLE로 평문 TCP 통신 유지
+################################################################################
+---
+# oliveyoung-api: mTLS + Circuit Breaker
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: oliveyoung-api-dr
+  namespace: oliveyoung
+spec:
+  host: oliveyoung-api.oliveyoung.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL           # Envoy 간 자동 mTLS
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 100   # 대기 요청 100개 초과 시 503 즉시 반환
+        http2MaxRequests: 1000
+      tcp:
+        maxConnections: 100            # TCP 연결 100개 초과 시 차단
+    outlierDetection:                  # Circuit Breaker
+      consecutiveGatewayErrors: 5      # 연속 5회 5xx 에러 시
+      interval: 10s                    # 10초 단위로 에러율 집계
+      baseEjectionTime: 30s            # 30초 격리
+      maxEjectionPercent: 50           # 전체 Pod의 50%까지만 격리 (서비스 유지)
+---
+# Kafka: mTLS 비활성화 (TCP 프로토콜, 사이드카 없음)
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: kafka-dr
+  namespace: oliveyoung
+spec:
+  host: "*.kafka-headless.oliveyoung.svc.cluster.local"
+  trafficPolicy:
+    tls:
+      mode: DISABLE   # Kafka 평문 TCP 통신 유지
+---
+# Zookeeper: mTLS 비활성화
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: zookeeper-dr
+  namespace: oliveyoung
+spec:
+  host: zookeeper.oliveyoung.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE   # Zookeeper 평문 TCP 통신 유지

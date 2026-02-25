@@ -1,0 +1,22 @@
+################################################################################
+# PeerAuthentication - 서비스 간 mTLS 정책
+#
+# [PERMISSIVE → STRICT 단계적 전환 전략]
+# 1단계 (현재): PERMISSIVE
+#   - 평문/mTLS 요청 둘 다 허용
+#   - 사이드카 주입 후 기존 서비스가 정상 동작하는지 검증
+#   - ALB처럼 사이드카 없는 외부 트래픽도 허용됨
+#
+# 2단계 (검증 완료 후): STRICT
+#   - mTLS 요청만 허용, 평문 통신 완전 차단
+#   - 사이드카 없는 Pod에서 오는 요청 거부 → 진정한 Zero Trust
+#   - 전환 방법: mode: PERMISSIVE → mode: STRICT 으로 변경 후 push
+################################################################################
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: oliveyoung-mtls
+  namespace: oliveyoung
+spec:
+  mtls:
+    mode: PERMISSIVE   # 검증 완료 후 STRICT으로 변경

@@ -35,6 +35,8 @@ spec:
     metadata:
       labels:
         app: zookeeper
+      annotations:
+        sidecar.istio.io/inject: "false"   # Kafka TCP 프로토콜 호환 불가 → 사이드카 제외
     spec:
       containers:
         - name: zookeeper
@@ -124,6 +126,8 @@ spec:
     metadata:
       labels:
         app: kafka
+      annotations:
+        sidecar.istio.io/inject: "false"   # Kafka TCP 프로토콜 호환 불가 → 사이드카 제외
     spec:
       # Kafka 브로커 간 Anti-Affinity: 각 브로커를 다른 노드에 배치
       affinity:
