@@ -44,11 +44,11 @@ spec:
             }
           ]
         # --- Istio Envoy 사이드카 리소스 제한 ---
-        # proxyCPULimit 2000m / proxyMemoryLimit 2Gi: 150,000 VU 피크 트래픽 기준 상향
+        # proxyCPULimit 4000m / proxyMemoryLimit 10Gi: 150,000 VU 피크 트래픽, 파드 10개 분산 기준
         sidecar.istio.io/proxyCPU: "500m"
         sidecar.istio.io/proxyMemory: "1Gi"
-        sidecar.istio.io/proxyCPULimit: "2000m"
-        sidecar.istio.io/proxyMemoryLimit: "2Gi"
+        sidecar.istio.io/proxyCPULimit: "4000m"
+        sidecar.istio.io/proxyMemoryLimit: "10Gi"
         # --- Datadog 메트릭 수집 ---
         ad.datadoghq.com/oliveyoung-api.check_names: '["openmetrics"]'
         ad.datadoghq.com/oliveyoung-api.init_configs: '[{}]'

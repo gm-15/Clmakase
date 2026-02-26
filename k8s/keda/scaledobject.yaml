@@ -33,7 +33,7 @@ spec:
     name: oliveyoung-api               # deployment.yaml의 name과 일치
 
   # 스케일링 범위
-  minReplicaCount: 2                   # 항상 최소 2개 유지 (HA + deployment 롤링업데이트 충돌 방지)
+  minReplicaCount: 10                  # 부하테스트 기준 사전 Warm-up (OOM 방지용 최소 파드 확보)
   maxReplicaCount: 100                 # 노드 리소스 한도 내 최대 Pod 수 (150,000 VU 부하테스트)
 
   # 폴링 및 쿨다운
@@ -48,7 +48,7 @@ spec:
           stabilizationWindowSeconds: 30    # 스케일 아웃: 30초 동안 안정적으로 높으면 실행
           policies:
             - type: Pods
-              value: 10                     # 한 번에 최대 10개 Pod 추가
+              value: 50                     # 한 번에 최대 50개 Pod 추가 (150,000 VU 급상승 대응)
               periodSeconds: 30
         scaleDown:
           stabilizationWindowSeconds: 180   # 스케일 인: 3분 동안 안정적으로 낮아야 실행
