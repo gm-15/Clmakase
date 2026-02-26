@@ -33,7 +33,7 @@ spec:
     name: oliveyoung-api               # deployment.yaml의 name과 일치
 
   # 스케일링 범위
-  minReplicaCount: 10                  # 부하테스트 기준 사전 Warm-up (OOM 방지용 최소 파드 확보)
+  minReplicaCount: 2                   # 평시 최소 (장애 주입 시나리오 기준)
   maxReplicaCount: 100                 # 노드 리소스 한도 내 최대 Pod 수 (150,000 VU 부하테스트)
 
   # 폴링 및 쿨다운
