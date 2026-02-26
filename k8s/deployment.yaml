@@ -91,7 +91,7 @@ spec:
             - name: DD_TRACE_SAMPLE_RATE
               value: "0.05"  # 1.0(100%)에서 0.05(5%)로 변경 - Datadog APM 비용 절감
             - name: SPRING_PROFILES_ACTIVE
-              value: "prod"
+              value: "prod,version-c"
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-0.kafka-headless.oliveyoung.svc.cluster.local:9092,kafka-1.kafka-headless.oliveyoung.svc.cluster.local:9092,kafka-2.kafka-headless.oliveyoung.svc.cluster.local:9092"
             # ElastiCache 엔드포인트 (terraform output redis_endpoint 로 확인)
