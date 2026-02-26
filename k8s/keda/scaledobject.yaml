@@ -34,7 +34,7 @@ spec:
 
   # 스케일링 범위
   minReplicaCount: 2                   # 항상 최소 2개 유지 (HA + deployment 롤링업데이트 충돌 방지)
-  maxReplicaCount: 50                  # 노드 리소스 한도 내 최대 Pod 수 (30,000 VU 부하테스트)
+  maxReplicaCount: 100                 # 노드 리소스 한도 내 최대 Pod 수 (150,000 VU 부하테스트)
 
   # 폴링 및 쿨다운
   pollingInterval: 15                  # 15초마다 메트릭 수집
@@ -48,7 +48,7 @@ spec:
           stabilizationWindowSeconds: 30    # 스케일 아웃: 30초 동안 안정적으로 높으면 실행
           policies:
             - type: Pods
-              value: 4                      # 한 번에 최대 4개 Pod 추가
+              value: 10                     # 한 번에 최대 10개 Pod 추가
               periodSeconds: 30
         scaleDown:
           stabilizationWindowSeconds: 180   # 스케일 인: 3분 동안 안정적으로 낮아야 실행

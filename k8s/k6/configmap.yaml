@@ -32,9 +32,9 @@ data:
      */
     export const options = {
         stages: [
-            { duration: '2m',  target: 30000 }, // 1단계: 2분간 30,000명까지 급격한 러시 (세일 오픈)
-            { duration: '13m', target: 30000 }, // 2단계: ★피크★ 13분간 30,000명 유지 (총 15분 피크)
-            { duration: '5m',  target: 0     }, // 3단계: 5분간 트래픽 감소 (세일 종료)
+            { duration: '2m',  target: 150000 }, // 1단계: 2분간 150,000명까지 급격한 러시 (세일 오픈)
+            { duration: '13m', target: 150000 }, // 2단계: ★피크★ 13분간 150,000명 유지 (총 15분 피크)
+            { duration: '5m',  target: 0      }, // 3단계: 5분간 트래픽 감소 (세일 종료)
         ],
         thresholds: {
             http_req_duration: ['p(95)<5000'], // 95% 요청이 5000ms 이내 (30,000 VU 부하 고려)
