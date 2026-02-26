@@ -6,7 +6,6 @@ stages:
   - deploy-secrets
   - deploy-frontend
   - load-test
-  - renovate
 
 variables:
   AWS_REGION: ap-northeast-2
@@ -172,26 +171,3 @@ load-test:
     - if: $CI_COMMIT_BRANCH == "main"
       when: manual
 
-# ------------------------------------------------------------------------------
-# Renovate - 의존성 자동 업데이트 MR 생성
-# 매주 월요일 오전 9시 스케줄 실행
-# 필요 GitLab Variable: RENOVATE_TOKEN (Project Access Token, api + write_repository 권한)
-# ------------------------------------------------------------------------------
-renovate:
-  stage: renovate
-  image:
-    name: renovate/renovate:latest
-    entrypoint: [""]
-  script:
-    - export RENOVATE_TOKEN="${RENOVATE_TOKEN}"
-    - export RENOVATE_PLATFORM=gitlab
-    - export RENOVATE_ENDPOINT=https://gitlab.com/api/v4
-    - export RENOVATE_REPOSITORIES="${CI_PROJECT_PATH}"
-    - export LOG_LEVEL=debug
-    - echo "RENOVATE_TOKEN is set? $([ -n "$RENOVATE_TOKEN" ] && echo YES || echo NO)"
-    - renovate
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-    - if: $CI_PIPELINE_SOURCE == "web"
-      when: manual
-  allow_failure: true
