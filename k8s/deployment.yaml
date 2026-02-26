@@ -43,9 +43,9 @@ spec:
             }
           ]
         # --- Istio Envoy 사이드카 리소스 제한 ---
-        # proxyCPULimit 4000m / proxyMemoryLimit 10Gi: 150,000 VU 피크 트래픽, 파드 10개 분산 기준
-        sidecar.istio.io/proxyCPU: "500m"
-        sidecar.istio.io/proxyMemory: "1Gi"
+        # request 낮게 유지(스케줄링 효율) / limit 높게 유지(피크 OOM 방지)
+        sidecar.istio.io/proxyCPU: "100m"
+        sidecar.istio.io/proxyMemory: "128Mi"
         sidecar.istio.io/proxyCPULimit: "4000m"
         sidecar.istio.io/proxyMemoryLimit: "10Gi"
         # --- Datadog 메트릭 수집 ---
