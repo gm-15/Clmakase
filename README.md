@@ -1,374 +1,358 @@
-# OliveYoung 대규모 세일 이벤트 시스템
+# Clmakase — OliveYoung Flash-Sale Defense System
 
-> **CloudWave 7기 파이널 프로젝트**
-> AWS EKS 기반 고가용성 세일 이벤트 처리 시스템
-> 도메인: `clmakase.click` | 리전: `ap-northeast-2`
+> **CloudWave 7th Cohort · Final Project**
+> A 150,000-VU concurrent flash-sale event system on AWS EKS, verified end-to-end via a 20-minute Datadog-measured load test.
+> Domain: `clmakase.click` · Region: `ap-northeast-2`
 
----
-
-## 핵심 성과
-
-| 지표 | 결과 |
-|------|------|
-| 최대 동시 접속자 | **150,000 VU** |
-| 피크 RPS | **56,300 hits/s** (Datadog 실측) |
-| 안정 RPS | **49,500 hits/s** (피크 구간 평균) |
-| 총 처리 요청 수 | **4.65M hits** (20분) |
-| Success Rate | **100%** (5xx 에러 0건) |
-| P99 Latency | **180ms 이하** |
-| OOMKilled | **0건** |
-| 서비스 중단 | **0건** |
-| 최대 API Pod | **100개** (KEDA 자동 스케일) |
-| 최대 노드 | **26개** (Karpenter Spot 자동 프로비저닝) |
-| 브로커 장애 시 P95 개선 | **3,137ms → 436ms (87%)** |
-| 주문 데이터 유실 | **0건** (Non-blocking Retry + DLT) |
+🇰🇷 한국어 버전: [README.ko.md](README.ko.md)
 
 ---
 
-## 시스템 아키텍처
+## ✨ At a Glance
+
+- **Production-grade modern stack on AWS EKS** — Kafka 3-Broker StatefulSet, Karpenter (all-Spot), KEDA composite scaling, ArgoCD GitOps, Istio service mesh, Terraform 16-module IaC, GitLab CI/CD 8-stage pipeline.
+- **150,000 VU load test passed** with 0 OOMKilled · 0 5xx errors · P99 ≤ 180 ms · 4.65 M total requests in 20 min, all on Spot instances.
+- **Backend-driven trouble-shootings**, 10 of which are documented in this README and reproducible against the codebase — most notably the **Aurora "Too many connections" formula derivation** (`maxReplicas × pool_size ≤ max_connections`) that turned scale-out itself into a DB attack surface.
+
+---
+
+## 🛒 Why This Project Exists (Background)
+
+The project was modelled on **the Olive Young flash-sale event** — a recurring moment when 150,000+ customers attempt to purchase the same limited-quantity products within the same minute, and where every architectural failure mode (DB connection exhaustion, broker outages, cold-start latency, scale-out paradoxes) surfaces simultaneously. The Olive Young event was chosen specifically because:
+
+- It is a **public, recurring, time-bounded** workload — the load curve is reproducible in a test environment with k6.
+- It is a **high-stakes correctness scenario** — over-selling a single SKU costs trust; under-serving costs revenue; both must be prevented even during partial infrastructure failure.
+- It exercises the full stack — CDN, edge, ALB, EKS, Kafka, Aurora, Redis — under a single coordinated load profile.
+
+The system was designed to defend a 150,000-VU spike with zero 5xx errors, zero OOM events, and broker-failure recovery under 500 ms — verified by a 20-minute Datadog-measured load test on 2026-02-26.
+
+---
+
+## 🎯 Verified Metrics (Datadog, 2026-02-26)
+
+Measured by Datadog `as_rate()` query over a 20-minute window — full evidence in [evidence/load-test-2026-02-26/](evidence/load-test-2026-02-26/).
+
+| Metric | Value | Source |
+|---|---|---|
+| **Peak RPS** | **56,300 hits/s** | [Datadog screenshot](evidence/load-test-2026-02-26/datadog-rps-overview.png) |
+| **Stable RPS** | **49,500 hits/s** (peak-window average) | same |
+| **Total requests** | **4.65 M hits** (20 min) | same (Datadog SUM) |
+| **Success rate** | **100 %** (zero 5xx errors) | same |
+| **P99 latency** | **≤ 180 ms** | Datadog APM |
+| **OOMKilled** | **0** | k8s event log |
+| **Service interruption** | **none** | Datadog uptime |
+| **Max API pods** | **100** (KEDA `maxReplicas`) | k8s metrics |
+| **Max nodes** | **26** Spot instances (~128 vCPU / ~600 GB) | Karpenter event log |
+| **Broker-failure P95** | **3,137 ms → 436 ms (87 % improvement)** | Version A vs Version C comparison ([CSVs](.)) |
+| **Order-data loss under broker failure** | **0** (Non-blocking Retry + DLT) | Version C invariant |
+
+> **Datadog query**: `sum:trace.servlet.request.hits{service:oliveyoung-api}.as_rate().rollup(max, 1)`
+> **Test window**: 2026-02-26 11:54 am – 12:14 pm KST
+
+---
+
+## 👤 My Role & Responsibilities
+
+I led the project as the team lead and owned the backend + infrastructure tracks below. Security policy details (WAF rules, KMS key policies, Cloud Custodian forensics) were a teammate's track; I integrated their work via Terraform module composition only.
+
+### Owned (interview-defendable in depth)
+
+- **Backend (Spring Boot)** — order-processing service, Kafka producer/consumer, `@RetryableTopic` + `@DltHandler`, **7 custom Micrometer counters** for stage-level retry observability.
+- **The Aurora connection-pool formula** — derived `maxReplicas × pool_size ≤ Aurora_max_connections`, reduced HikariCP `pool_size` from 10 → 5 as the resolution.
+- **Kafka 3-Broker StatefulSet** — RF=3, `min.insync.replicas=2`, 20 partitions, Idempotent Producer, Non-blocking Retry topic with 3-stage backoff (1 s → 5 s → 30 s) and DLT.
+- **Terraform 16-module IaC architecture** — VPC, EKS, RDS, ElastiCache, ALB controller, ArgoCD, ECR, S3, CloudFront, ACM, Route53, security-groups, secrets, waf, kms, cli (SSM Bastion).
+- **Karpenter migration** — full transition from Managed Node Group; resolved a chain of 16 cascading errors during stabilization.
+- **KEDA composite scaling** — Kafka consumer-lag trigger + Datadog RPS trigger + Cron warm-up trigger; tuned `maxReplicas=100` and `scaleUp 50 pods / 30 s`.
+- **GitLab CI/CD 8-stage pipeline** — `test → build → trivy-scan → update-manifest → deploy-secrets → deploy-frontend → load-test → ArgoCD trigger`. Includes commit-SHA-based image tag rewriting via `sed`, `[skip ci]` infinite-loop prevention, and CloudFront cache auto-invalidation.
+- **DevSecOps in CI** — Trivy CVE scanning integration, ECR auto-scan configuration, Renovate dependency-update automation.
+- **K8s manifests** — `Deployment` (with `spec.replicas` field intentionally removed for KEDA single-source-of-truth control), KEDA `ScaledObject`, Karpenter `NodePool` and `EC2NodeClass`, Istio sidecar resource tuning (256 Mi → 10 Gi memory limit).
+- **150,000-VU final load test** — designed scenario, executed via k6 distributed (`parallelism=10`, 15,000 VU per pod, 8 core / 16 GB), wrote the engineering reflection on expected vs measured RPS divergence.
+
+### Team-led (I composed Terraform modules; I do not claim policy-content authorship)
+
+- WAF rule definitions
+- KMS key policies
+- Secrets Manager rotation policies
+- Cloud Custodian forensics policies (`custodian/iam-forensics.yml`, `custodian/ec2-forensics.yml`)
+- Istio mTLS PeerAuthentication policy details
+
+### 🚧 Section To Be Added
+
+- **Teamwork & collaboration** — leadership style, conflict resolution, how the team divided ownership across backend/infra/security tracks. (Drafting in progress.)
+
+---
+
+## 🏛️ System Architecture
+
+### Full Architecture
+![Full Architecture](assets/architecture/full-architecture.png)
+
+The full system spans the AWS account from edge security (Route53 → WAF → CloudFront → S3) through a Multi-AZ EKS production VPC, a separated developer-access VPC (Session Manager + Client VPN + CLI Server), an observability plane (CloudWatch · Datadog · Falco · Istio · Prometheus · Loki · Tempo · Grafana), an automated security plane (IAM · KMS · ASM · GuardDuty · Inspector · Access Analyzer · Config · Security Hub · ACM · WAF · Shield), and a regional DR plane (`ap-northeast-2` primary ↔ `ap-northeast-1` secondary with Aurora Replica + ElastiCache Global DB) plus a VPC-flow-log forensics pipeline (VPC Flow Logs → Kinesis Data Streams → Kinesis Data Firehose → S3 → EventBridge → Step Functions → SageMaker → Lambda → Slack).
+
+### Production Plane (User-facing traffic)
+![Production Plane](assets/architecture/production-plane.png)
+
+User → Route53 → CloudFront (with S3 static frontend offload) → WAF → Internet Gateway → Ingress ALB → EKS pods (Multi-AZ across two AZs, NAT in each public subnet for egress, ElastiCache + Aurora in private data subnets, Bastion Server for admin access). The orange box across the AZs marks the Kafka 3-Broker StatefulSet boundary.
+
+### Development Plane (Internal access)
+![Development Plane](assets/architecture/development-plane.png)
+
+Admin → Session Manager → ECR. Developer → Client VPN → CLI Server (private subnet) → EKS / RDS / ElastiCache. GitLab pushes images to ECR through a VPC Endpoint. Egress through a public-subnet NAT.
+
+### Demo Videos
+
+| Title | Link |
+|---|---|
+| 🎬 **Load Test Demo** — k6 distributed load test driving the system to 150,000 VU | [youtube.com/watch?v=WcVVNoNMsG8](https://www.youtube.com/watch?v=WcVVNoNMsG8) |
+| 🎬 **Frontend Demo** — User-facing flash-sale flow walkthrough | [youtube.com/watch?v=sHEY-YEHfT4](https://www.youtube.com/watch?v=sHEY-YEHfT4) |
+
+<details>
+<summary>📐 Text-only architecture (for terminal viewers)</summary>
 
 ```
-사용자
-  │ HTTPS
-  ▼
-CloudFront ──────────────── S3 (React 정적 호스팅)
-  │
-  ▼
+User
+ │ HTTPS
+ ▼
+CloudFront ──────────── S3 (React static hosting)
+ │
+ ▼
 WAF ─── ALB (api.clmakase.click)
-              │
-              ▼
+            │
+            ▼
         EKS Cluster (ap-northeast-2)
           │
           ├─ oliveyoung-api Pod × 1~100
-          │    ├─ KEDA ScaledObject
-          │    │    ├─ Kafka consumer lag 트리거
-          │    │    ├─ Datadog RPS 트리거
-          │    │    └─ Cron 트리거 (세일 오픈 Warm-up)
-          │    └─ Istio sidecar (mTLS)
+          │   ├─ KEDA ScaledObject
+          │   │   ├─ Kafka consumer-lag trigger
+          │   │   ├─ Datadog RPS trigger
+          │   │   └─ Cron warm-up trigger (sale-open)
+          │   └─ Istio sidecar (mTLS)
           │
           ├─ Kafka 3-Broker StatefulSet
-          │    └─ Zookeeper (리더 선출·offset 관리)
+          │   └─ Zookeeper (leader election · offset)
           │
           ├─ Karpenter NodePool
-          │    └─ c/m/r 패밀리 6세대+, 전량 Spot
+          │   └─ c/m/r 6th gen+, all-Spot
           │
-          └─ ArgoCD (GitOps selfHeal + prune)
-               │
-               ├─ Aurora MySQL (Multi-AZ, HikariCP pool 5)
-               └─ ElastiCache Redis (대기열 상태 캐싱)
+          └─ ArgoCD (GitOps · selfHeal · prune)
+              │
+              ├─ Aurora MySQL (Multi-AZ, HikariCP pool=5)
+              └─ ElastiCache Redis (queue state)
 ```
 
+</details>
+
 ---
 
-## 기술 스택
+## 🔧 Tech Stack
 
-| 영역 | 기술 |
-|------|------|
-| **오케스트레이션** | EKS v1.30 + Karpenter v1.0.1 |
-| **메시징** | Kafka 3-Broker + Zookeeper |
-| **오토스케일링** | KEDA (Kafka lag / Datadog RPS / Cron 복합 트리거) |
-| **GitOps** | ArgoCD + GitLab CI/CD (8단계 파이프라인) |
-| **서비스 메시** | Istio mTLS + Kiali |
-| **데이터** | Aurora MySQL (Multi-AZ) + ElastiCache Redis |
-| **IaC** | Terraform 16개 모듈 |
-| **모니터링** | Datadog APM + Prometheus (Kiali 전용) |
-| **보안** | WAF + KMS + Secrets Manager + Trivy |
+| Layer | Technology |
+|---|---|
+| **Orchestration** | EKS v1.30 + Karpenter v1.0.1 |
+| **Messaging** | Kafka 3-Broker StatefulSet + Zookeeper (RF=3, `min.insync=2`, 20 partitions) |
+| **Auto-scaling** | KEDA composite trigger (Kafka lag / Datadog RPS / Cron warm-up) |
+| **GitOps** | ArgoCD + GitLab CI/CD (8-stage pipeline) |
+| **Service mesh** | Istio mTLS + Kiali |
+| **Data** | Aurora MySQL (Multi-AZ) + ElastiCache Redis |
+| **IaC** | Terraform — 16 modules |
+| **Monitoring** | Datadog APM + Prometheus (Kiali-only, 6h retention) |
+| **Security (CI)** | Trivy CVE scan + ECR auto-scan + Renovate (Owned) |
+| **Security (Network/Data)** | WAF + KMS + Secrets Manager + Cloud Custodian (Team-led) |
 | **CDN** | CloudFront + S3 + ACM + Route53 |
-| **백엔드** | Spring Boot + Micrometer (커스텀 메트릭 7종) |
+| **Backend** | Spring Boot · Java 17 · Micrometer (7 custom counters) |
 
 ---
 
-## 프로젝트 구조
+## 🚦 Backend Deep Dives
+
+### 1. The Scale-Out Paradox — Aurora "Too many connections"
+
+During load testing, scaling out pods caused Aurora to fail rather than the bottleneck it was meant to relieve. The defect lived at the application's connection-pool level.
+
+**Diagnosis.** Each Spring Boot pod opens up to `pool_size` connections. With KEDA scaling pods to `maxReplicas=100` and a default `pool_size=10`, the cluster requested up to 1,000 simultaneous DB connections — far past Aurora's `max_connections` budget.
+
+**Formula derivation.**
+```
+total_db_connections = maxReplicas × HikariCP.pool_size
+must hold:  total_db_connections ≤ Aurora.max_connections
+```
+
+**Resolution.** Reduced `pool_size` from 10 → 5 (so 100 × 5 = 500 ≤ Aurora's budget), enforced the formula as a pre-flight check before every scale-policy change.
+
+This is the headline story for **why I am a backend engineer who happens to operate infrastructure, not the other way around**: the symptom appeared in EKS metrics, but the root cause was in the Spring Boot connection pool.
+
+### 2. Kafka Non-blocking Retry + DLT
+
+A single broker failure in the early architecture (Version A) produced **3,137 ms P95 latency** and lost order data. The cause was a single-broker SPOF compounded by a Circuit Breaker → Redis fallback path that itself was high-latency.
+
+**Redesign (Version C).** 3-Broker StatefulSet (RF=3, `min.insync.replicas=2`) with `@RetryableTopic` and a non-blocking retry pipeline:
+
+```
+order-events (origin)
+  │ failure
+  ├─ order-events-retry-0  (1 s   delay)   ← network jitter
+  │   │ failure
+  ├─ order-events-retry-1  (5 s   delay)   ← DB back-pressure
+  │   │ failure
+  ├─ order-events-retry-2  (30 s  delay)   ← serious infra failure
+  │   │ failure
+  └─ order-events.DLT                       ← manual replay
+```
+
+**Result (broker-1-down chaos test, 100 users):**
+
+| Metric | Version A | **Version C** |
+|---|---|---|
+| Throughput | 0.4 req/s | **3.3 req/s** |
+| P95 latency | 3,137 ms | **436 ms (–87 %)** |
+| Order data | **lost** | **preserved** |
+
+7 Micrometer custom counters (`order_success_total`, `order_retry_total{stage=0|1|2}`, `order_dlt_total`, `kafka_retry_total`, `dlt_messages_total`) make the failure layer identifiable from the dashboard alone — a stage-2 spike means infra failure, a stage-0 spike means transient network jitter, and so on.
+
+### 3. Cold Start Defense — KEDA Warm-up + Karpenter
+
+Sale-open traffic was arriving 2 minutes faster than EKS could provision new nodes, producing a cold-start dip in the first 30 seconds.
+
+**Resolution.**
+- **Cron-triggered warm-up.** KEDA `cron` trigger raises `minReplicaCount` to 10 starting 23:50 KST (the night before each sale).
+- **Aggressive scaleUp.** `50 pods / 30 s` policy (vs default 10 / 30 s).
+- **Karpenter consolidation.** All-Spot node pool with `consolidationPolicy: WhenUnderutilized` for cost recovery during off-peak.
+
+In the final load test, scale-out completed within 60 seconds of the load arriving — verified in the Datadog evidence files.
+
+### 4. DevSecOps in CI
+
+Three CI-side security automations I owned:
+
+- **Trivy.** CVE scanning step in the GitLab pipeline; build fails on high/critical findings (with one historical Tomcat CVE patched through this gate).
+- **ECR auto-scan.** Every image push triggers AWS ECR vulnerability scan; results visible in the AWS console.
+- **Renovate.** Automated dependency-update PRs with grouped patches and weekly schedule for non-urgent updates.
+
+The boundary: I do NOT claim authorship of WAF/KMS/Cloud-Custodian *policy content*. Those are teammate-owned. I integrated them only as Terraform module references.
+
+---
+
+## 🛠️ Trouble-shootings (10 verified)
+
+| # | Problem | Root cause | Resolution | Layer |
+|---|---|---|---|---|
+| 1 | Kafka broker failure → P95 3,137 ms | Single-broker SPOF + CB → Redis fallback latency | 3-Broker + Non-blocking Retry + DLT | Messaging |
+| 2 | KEDA not scaling | `Deployment.spec.replicas` overrode HPA | Removed the `replicas` field entirely | K8s |
+| 3 | Sale-open cold start | `minReplicas=2` insufficient | Cron trigger + `minReplicas=10` warm-up | KEDA |
+| 4 | EKS node provisioning failed 3× | Managed Node Group structural conflict | Migrated to Karpenter; resolved 16 cascading errors | Infra |
+| 5 | Aurora "Too many connections" | `maxReplicas × pool_size > max_connections` | Derived formula; reduced pool 10 → 5 | **Backend ↔ DB** |
+| 6 | ArgoCD selfHeal overwrote Secret | Secret defined inside git YAML | Removed Secret YAML; CI-only injection | GitOps |
+| 7 | ArgoCD didn't deploy new image | `latest` tag → manifest unchanged → no diff | Commit-SHA tag + `update-manifest` job | CI/CD |
+| 8 | Mixed Content blocking | CloudFront cached old JS + hard-coded `http://` | Relative paths + CI cache invalidation | Frontend ops |
+| 9 | Terraform circular dependency | RDS ↔ Secrets cycle | Removed `db_host` from Secrets module | IaC |
+| 10 | istio-proxy OOMKilled at 150 K VU | Memory limit 256 Mi insufficient | Limit raised to 10 Gi; request/limit separated | Service mesh |
+
+Each item has corresponding commit history in this repository.
+
+---
+
+## 📊 Engineering Reflection — Expected vs Measured RPS
+
+**Expected (theoretical) at 150 K VU:** ~112 K RPS.
+**Measured at peak:** 56.3 K RPS.
+
+The gap was not an error — it was two compounding effects:
+
+1. **Iteration period stretch.** Under load, server response time grew, which extended the k6 VU iteration period from ~10 s to 20 s+. Each VU's effective RPS contribution halved during the steady state.
+2. **Sidecar overhead.** Every request traverses an Istio sidecar; the proxy's per-hop cost throttled aggregate throughput.
+
+**Conclusion.** 56.3 K RPS was achieved with **zero error budget consumed**, on **all-Spot instances**, with **60-second responsiveness** to the load arrival via KEDA + Karpenter. This is the correct number to defend in interviews — not the theoretical 112 K.
+
+---
+
+## 📁 Project Structure
 
 ```
 Clmakase/
 ├── backend/
 │   └── src/main/java/com/oliveyoung/sale/
-│       ├── config/             # Redis, Kafka, 초기 데이터 설정
-│       ├── controller/         # REST API 컨트롤러
-│       ├── domain/             # 엔티티 (Product, PurchaseOrder)
-│       ├── dto/                # 요청/응답 DTO
-│       ├── repository/         # JPA Repository
+│       ├── config/                          # Redis, Kafka, init data
+│       ├── controller/                      # REST controllers
+│       ├── domain/                          # Entities (Product, PurchaseOrder)
+│       ├── dto/
+│       ├── repository/
 │       └── service/
-│           ├── KafkaProducerService.java       # 이벤트 발행
-│           ├── KafkaClusterConsumerService.java # 대기열 컨슘
-│           └── OrderConsumerService.java        # 주문 처리 + Non-blocking Retry
-├── frontend/                   # React 프론트엔드
+│           ├── KafkaProducerService.java
+│           ├── KafkaClusterConsumerService.java
+│           └── OrderConsumerService.java    # Order processing + Non-blocking Retry
+├── frontend/                                # React app
 ├── k8s/
-│   ├── deployment.yaml         # oliveyoung-api (replicas 필드 없음 — KEDA 전담)
+│   ├── deployment.yaml                      # No replicas field — KEDA-only control
 │   ├── keda/
-│   │   ├── scaled-object.yaml  # 복합 트리거 ScaledObject
+│   │   ├── scaled-object.yaml               # Composite trigger
 │   │   └── trigger-auth-datadog.yaml
-│   ├── node-class.yaml         # Karpenter EC2NodeClass (AL2023, amd64)
-│   ├── node-pool.yaml          # Karpenter NodePool (Spot, xlarge~8xlarge)
+│   ├── node-class.yaml                      # Karpenter EC2NodeClass
+│   ├── node-pool.yaml                       # Karpenter NodePool (Spot)
+│   ├── istio/
 │   └── monitoring/
-│       └── prometheus-values.yaml  # Kiali 전용 (6시간 보존)
 ├── terraform/
-│   ├── main.tf                 # 전체 모듈 오케스트레이션
-│   ├── karpenter_iam.tf        # Karpenter IAM (OIDC Trust, Node KMS)
-│   └── modules/
-│       ├── vpc/                # 6서브넷 (Public/App/Data × 2 AZ)
-│       ├── security-groups/    # 7개 SG
-│       ├── eks/                # 클러스터 + OIDC
-│       ├── ecr/                # oliveyoung-api 레포지토리
-│       ├── rds/                # Aurora MySQL Multi-AZ
-│       ├── elasticache/        # Redis
-│       ├── alb-controller/     # Helm 릴리스
-│       ├── argocd/             # Helm 릴리스
-│       ├── cli/                # SSM 기반 Bastion
-│       ├── secrets/            # Secrets Manager
-│       ├── waf/                # WAF
-│       ├── kms/                # KMS
-│       ├── s3/                 # 프론트엔드 정적 호스팅
-│       ├── route53/            # DNS
-│       ├── acm/                # SSL 인증서
-│       └── cloudfront/         # CDN
+│   ├── main.tf
+│   ├── karpenter_iam.tf
+│   └── modules/                             # 16 modules
+├── custodian/                               # (team-led)
 ├── k6/
-│   └── load-test.js            # 부하테스트 시나리오
-├── docker-compose-version-a.yml
-├── docker-compose-version-c.yml
-└── .gitlab-ci.yml              # 8단계 CI/CD 파이프라인
+│   └── load-test.js
+├── evidence/
+│   └── load-test-2026-02-26/                # Datadog screenshot + reports
+├── docker-compose-version-a.yml             # Single-broker baseline
+├── docker-compose-version-c.yml             # 3-broker + Retry
+└── .gitlab-ci.yml                           # 8-stage pipeline
 ```
 
 ---
 
-## CI/CD 파이프라인
+## 🌐 API Reference (selected)
 
-```
-git push main
-  ↓
-[1] test            → Gradle JUnit (allow_failure)
-[2] build           → Docker → ECR (commit SHA 태그)
-[3] trivy-scan      → CVE 취약점 스캔
-[4] update-manifest → deployment.yaml SHA 교체 → git push [skip ci]
-[5] deploy-secrets  → KEDA Datadog Secret 주입 (git 외부 관리)
-[6] deploy-frontend → npm build → S3 → CloudFront 캐시 무효화
-[7] load-test       → k6 (when: manual, allow_failure: true)
-  ↓
-ArgoCD 감지 → EKS 롤링 배포
-```
+### Products
+- `GET /api/products`
+- `GET /api/products/{id}`
 
-**설계 포인트:**
-- commit SHA 태그 → ArgoCD가 변경 감지, 정확한 롤백 지점 확보
-- `[skip ci]` → manifest update 커밋의 무한 파이프라인 루프 방지
-- Secret은 git에 절대 정의하지 않음 → ArgoCD selfHeal 충돌 방지
+### Sale lifecycle
+- `GET  /api/sale/status`
+- `POST /api/sale/start`
+- `POST /api/sale/end`
 
----
+### Queue
+- `POST /api/queue/enter`
+- `GET  /api/queue/status`
 
-## 스케일링 아키텍처
+### Purchase
+- `POST /api/purchase`
 
-### KEDA 복합 트리거
-
-```yaml
-triggers:
-  - type: kafka       # Kafka consumer lag 기반
-  - type: datadog     # RPS 기반
-  - type: cron        # 세일 오픈 시각 Warm-up
-minReplicaCount: 10   # 세일 전 사전 준비
-maxReplicaCount: 100
-scaleUp: 50개/30s     # 급격한 트래픽 대응
-```
-
-> `Deployment.spec.replicas` 필드를 제거해야 KEDA가 단독으로 Pod 수를 제어합니다.
-> 해당 필드가 남아있으면 Deployment Controller와 충돌하여 스케일링이 동작하지 않습니다.
-
-### Karpenter NodePool
-
-```yaml
-requirements:
-  - key: karpenter.sh/capacity-type
-    values: ["spot"]            # 전량 Spot으로 비용 최적화
-  - key: node.kubernetes.io/instance-type
-    values: [c/m/r 패밀리 6세대+ xlarge~8xlarge]
-disruption:
-  consolidationPolicy: WhenUnderutilized  # 유휴 노드 자동 반납
-```
-
-### DB 연결 수 계산 공식
-
-```
-총 DB 연결 수 = maxReplicas × HikariCP pool_size ≤ Aurora max_connections
-```
-
-스케일 계획 수립 전 반드시 이 공식으로 연결 버짓을 사전 계산합니다.
-현재 설정: `pool_size=5` (기본값 10에서 축소)
-
----
-
-## Kafka 아키텍처 — Version A vs Version C
-
-### 비교 실험 결과
-
-**브로커 1대 강제 종료 시나리오 (100 Users):**
-
-| 지표 | Version A (단일 브로커 + CB) | Version C (3-Broker + Retry) |
-|------|------------------------------|-------------------------------|
-| Throughput | 0.4 req/s | 3.3 req/s |
-| P95 Latency | **3,137ms** | **436ms** |
-| 주문 데이터 | **유실** | **무손실** |
-
-**정상 트래픽 (1,000 Users):**
-
-| 지표 | Version A | Version C |
-|------|-----------|-----------|
-| Avg Latency | 439ms | **303ms (-31%)** |
-| P95 Latency | 859ms | **431ms (-50%)** |
-
-Spring Profile(`version-a` / `version-c`)로 전환하여 동일 인프라에서 아키텍처 차이만 변수로 격리한 비교 실험.
-
-### Non-blocking Retry 토픽 설계
-
-```
-order-events (원본)
-  │ 실패
-  ├─ order-events-retry-0 (1초 후)   ← 네트워크 순간 오류
-  │    │ 실패
-  ├─ order-events-retry-1 (5초 후)   ← DB 커넥션 부족
-  │    │ 실패
-  ├─ order-events-retry-2 (30초 후)  ← 심각한 인프라 장애
-  │    │ 실패
-  └─ order-events.DLT                ← 수동 Replay 대기
-```
-
-실패 메시지를 별도 토픽으로 격리 → 원본 파티션의 정상 메시지 처리 미중단.
-`productId`를 파티션 키로 사용 → 동일 상품 내 순서 보장 + 다른 상품 병렬 처리.
-
-### Micrometer 커스텀 메트릭 (7종)
-
-```
-order_success_total           — 주문 처리 성공
-order_retry_total{stage="0"}  — Stage 0 재시도 (네트워크 지터 감지)
-order_retry_total{stage="1"}  — Stage 1 재시도 (DB 병목 감지)
-order_retry_total{stage="2"}  — Stage 2 재시도 (인프라 장애 감지)
-order_dlt_total               — DLT 도달 (긴급 대응 트리거)
-kafka_retry_total             — 큐 재시도 횟수
-dlt_messages_total            — 큐 DLT 도달
-```
-
-stage별 카운터 상승 패턴만으로 장애 계층을 즉시 식별할 수 있도록 설계.
-
----
-
-## 150,000 VU 부하테스트 결과 (2026-02-26)
-
-**시나리오:** 0 → 150k VU 2분 급상승 → 13분 피크 유지 → 5분 감소 (총 20분)
-**구성:** k6 parallelism 10 (파드당 15,000 VU, 8core/16GB)
-**측정:** Datadog `as_rate()` 실측 (11:54 ~ 12:14)
-
-### 핵심 성능 지표 (Datadog 실측)
-
-| 지표 | 결과 |
-|------|------|
-| **Peak RPS** | **56,300 hits/s** |
-| **Stable RPS** | **49,500 hits/s** (피크 구간 평균) |
-| **총 처리 요청** | **4.65M hits** |
-| **Success Rate** | **100%** (5xx 에러 0건) |
-| **P99 Latency** | **180ms 이하** |
-| OOMKilled | **0건** |
-| 서비스 중단 | **없음** |
-
-> **RPS 분석**: 150k VU 기준 이론 최대치(~112k RPS)와 실측치(56k RPS)의 차이는
-> 고부하 시 서버 응답시간 증가로 k6 iteration 주기가 ~10s에서 ~20s 이상으로 연장된 것과
-> Istio-proxy 사이드카 네트워크 오버헤드가 복합적으로 작용한 결과.
-
-### 스케일링 타임라인
-
-```
-T+0:57  k6 VU 상승 시작 — 10개 Pod 사전 Warm-up 완료 (Cold Start 없음)
-T+5:45  KEDA 발동 — 10 → 86 Pod (50개/30s 정책)
-         Karpenter 노드 12 → 36개 급증
-T+6:xx  100 Pod 도달 (maxReplicas 한도)
-T+7:xx  r8i.8xlarge(32vCPU/256GB), c8i-flex.4xlarge 대형 노드 안착
-T+8~20  150,000 VU 피크 13분 안정 유지 — OOMKilled 0, CrashLoop 0
-```
-
-### 피크 인프라 구성 (전량 Spot)
-
-| 인스턴스 | 수량 | vCPU | RAM |
-|----------|------|------|-----|
-| c8i-flex.xlarge | 15 | 4 | 8GB |
-| c8i.xlarge | 5 | 4 | 8GB |
-| m7i-flex.xlarge | 2 | 4 | 16GB |
-| r8i.8xlarge | 1 | 32 | 256GB |
-| c8i-flex.4xlarge | 1 | 16 | 32GB |
-| c8i-flex.2xlarge | 1 | 8 | 16GB |
-| **합계** | **25** | **~128 core** | **~600GB** |
-
----
-
-## VPC 네트워크 설계
-
-| 서브넷 | CIDR | 용도 |
-|--------|------|------|
-| Public-2a/2c | 10.0.101~102.0/24 | ALB, NAT GW |
-| Private App-2a/2c | 10.0.1~2.0/24 | EKS 워커 노드 |
-| Private Data-2a/2c | 10.0.11~12.0/24 | Aurora, ElastiCache |
-
----
-
-## API 명세
-
-### 상품
-
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/products` | 상품 목록 조회 |
-| GET | `/api/products/{id}` | 상품 상세 조회 |
-
-### 세일
-
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/sale/status` | 세일 상태 조회 |
-| POST | `/api/sale/start` | 세일 시작 |
-| POST | `/api/sale/end` | 세일 종료 |
-
-### 대기열
-
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| POST | `/api/queue/enter` | 대기열 진입 |
-| GET | `/api/queue/status` | 대기 순번 조회 |
-
-### 구매
-
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| POST | `/api/purchase` | 구매 처리 |
-
-**공통 응답 형식:**
+Common response shape:
 ```json
 {
   "success": true,
   "data": { },
-  "message": "성공 메시지",
+  "message": "...",
   "errorCode": null
 }
 ```
 
 ---
 
-## 로컬 실행
+## 🚀 Local Development
 
-### Version A (단일 브로커 + Circuit Breaker)
-
+### Version A (single broker + Circuit Breaker)
 ```bash
 docker-compose -f docker-compose-version-a.yml up -d
-# 프론트엔드: http://localhost:3000
-# 백엔드 API: http://localhost:8081
+# Frontend:  http://localhost:3000
+# Backend:   http://localhost:8081
 ```
 
-### Version C (3-Broker + Non-blocking Retry)
-
+### Version C (3-broker + Non-blocking Retry)
 ```bash
-# Version A 종료 후 실행 (Kafka 포트 충돌 방지)
 docker-compose -f docker-compose-version-a.yml down
 docker-compose -f docker-compose-version-c.yml up -d
-# 백엔드 API: http://localhost:8082
+# Backend: http://localhost:8082
 ```
 
-### A/B 비교 부하테스트 (로컬)
-
+### A/B comparison load test (local)
 ```powershell
 # Windows PowerShell
 .\load-test-compare.ps1
@@ -376,68 +360,68 @@ docker-compose -f docker-compose-version-c.yml up -d
 
 ---
 
-## 핵심 설계 결정 Q&A
+## ❓ Engineering Decisions Q&A
 
-### Q. SQS 대신 Kafka를 직접 구축한 이유는?
+### Q. Why Kafka instead of SQS?
+1. **Partition-keyed ordering.** `productId`-based partitioning preserves per-product order and parallelizes across products.
+2. **Full retry control.** SQS DLQ is one-shot; `@RetryableTopic` lets us stratify retries by failure cause at the code level.
+3. **Replay.** DLT preserves failed messages for analyzed re-processing — non-negotiable for revenue data.
+*Trade-off accepted: more operational surface area (StatefulSet management, broker IDs, RF tuning).*
 
-1. **파티션 병렬 처리**: `productId` 기반 파티셔닝으로 동일 상품 순서 보장 + 고트래픽 수평 확장
-2. **Non-blocking Retry 완전 제어**: SQS DLQ는 단순 구조. `@RetryableTopic`으로 실패 원인별 지연 시간을 코드 레벨에서 세분화
-3. **메시지 Replay**: DLT에 보존된 실패 메시지를 원인 분석 후 재처리. 매출 데이터 유실 방지
+### Q. Why Karpenter instead of Managed Node Group?
+Managed Node Group hit `NodeCreationFailure` three times in succession. After confirming a structural conflict given the team's existing Karpenter setup, we migrated wholesale. Auto instance-family selection plus mixed Spot economics were a bonus, not the driver.
 
-*트레이드오프: 운영 복잡도 증가. StatefulSet 관리·broker ID 고정·replication factor 직접 핸들링.*
+### Q. Why Redis Sorted Set for the queue?
+- `score = timestamp` → FIFO ordering
+- `ZRANK` → O(log N) rank lookup
+- `ZADD` / `ZREM` → atomic operations under concurrency
+- Centralized state across multiple EKS pods
 
-### Q. Managed Node Group 대신 Karpenter를 쓴 이유는?
-
-Managed Node Group이 3회 연속 `NodeCreationFailure`로 실패. 팀이 이미 Karpenter로 전환한 상태에서의 구조적 충돌 확인 후 완전 전환. 인스턴스 패밀리 자동 선택과 Spot 혼합 운용으로 비용 최적화.
-
-### Q. 대기열을 Redis Sorted Set으로 구현한 이유는?
-
-- `score = timestamp` → FIFO 순서 보장
-- `ZRANK` → O(log N) 순위 조회
-- `ZADD`, `ZREM` → 원자적 연산으로 동시성 안전
-- EKS 다중 Pod 환경에서 중앙 상태 관리
-
-### Q. Readiness Probe 설정 기준은?
-
+### Q. How did you set Readiness/Liveness probes?
 ```yaml
 readinessProbe:
-  initialDelaySeconds: 90   # Spring 앱 실제 기동시간(~80s) + 여유
+  initialDelaySeconds: 90    # Spring boot ~80 s + buffer
   failureThreshold: 5
 livenessProbe:
   initialDelaySeconds: 150
   failureThreshold: 5
 ```
-
-`initialDelaySeconds`는 반드시 실제 앱 기동시간 + 10초 이상 여유를 두어야 합니다.
-성급한 probe 설정은 정상 기동 중인 Pod을 강제 종료시킵니다.
+`initialDelaySeconds` must be at least the actual app boot time + ~10 s. Aggressive probes terminate healthy pods that are still starting.
 
 ---
 
-## 주요 트러블슈팅 요약
+## 📚 Lessons Learned
 
-| # | 문제 | 원인 | 해결 |
-|---|------|------|------|
-| 1 | Kafka 브로커 장애 시 P95 3,137ms | 단일 브로커 SPOF + CB Redis fallback 고지연 | 3-Broker + Non-blocking Retry 전환 |
-| 2 | KEDA 스케일링 미동작 | `Deployment.spec.replicas` 고정값이 HPA 명령 덮어씀 | replicas 필드 완전 제거 |
-| 3 | 세일 오픈 직후 Cold Start 지연 | `minReplicas: 2`로 사전 준비 부족 | Cron 트리거 + `minReplicas: 10` Warm-up |
-| 4 | EKS 노드 프로비저닝 3회 실패 | Managed Node Group 구조적 충돌 | Karpenter 전환 + 16개 연쇄 에러 해결 |
-| 5 | Aurora Too many connections | `maxReplicas × pool_size` > `max_connections` | 공식 도출 후 pool 10→5 축소 |
-| 6 | ArgoCD selfHeal이 Secret 덮어씀 | Secret을 git YAML에 정의 | Secret 블록 제거, CI 전용 주입 |
-| 7 | ArgoCD 배포 미동작 | `latest` 태그 → YAML 변경 없음 → 감지 실패 | commit SHA 태그 + update-manifest job |
-| 8 | Mixed Content 차단 | CloudFront 구버전 JS 캐싱 + HTTP URL 하드코딩 | 상대경로 변환 + CI 자동 캐시 무효화 |
-| 9 | Terraform 순환 참조 | RDS ↔ Secrets 상호 의존 | Secrets에서 db_host 제거 |
-| 10 | istio-proxy OOMKilled | 150k VU 트래픽에서 limit 256Mi 초과 | limit 10Gi + request/limit 분리 |
+1. With KEDA, **always remove `Deployment.spec.replicas`**.
+2. **Never define Secrets in git YAML** — ArgoCD selfHeal will fight you.
+3. **Use commit SHA as the image tag** — `latest` makes ArgoCD blind to changes.
+4. **Pre-calculate** `maxReplicas × pool_size` against Aurora `max_connections` before every scale change.
+5. Probe `initialDelaySeconds` = real boot time + 10 s minimum.
+6. Scale-out is **reactive**; sale-open requires **proactive warm-up**.
+7. **Build success ≠ deploy success** — verify the manifest-update step closes the loop between CI and CD.
 
 ---
 
-## Lessons Learned
+## 🚧 Roadmap
 
-```
-1. KEDA 사용 시 Deployment.spec.replicas 필드는 반드시 제거
-2. Secret은 git에 절대 정의하지 않는다 — ArgoCD selfHeal 충돌
-3. 이미지 태그는 SHA — latest는 ArgoCD가 변경을 감지하지 못함
-4. DB 연결 수 = maxReplicas × pool_size 사전 계산 필수
-5. Probe initialDelay = 앱 실제 기동시간 + 10초 이상 여유
-6. 스케일링은 반응형 — 세일 오픈 전 Warm-up 전략 필수
-7. 빌드 성공 ≠ 배포 완료 — CI와 CD 사이의 Manifest Update 연결 고리 확인
-```
+- Architecture diagram in PNG/Mermaid (replacing the ASCII version)
+- Authentication layer for the queue (HMAC-signed token instead of plain self-issued)
+- Multi-region active-active deployment plan
+- Public load-test summary post on velog.io/@gm-15
+
+---
+
+## 🤝 Team
+
+- GitHub organization: [github.com/Cloudwave-5-CJ](https://github.com/Cloudwave-5-CJ)
+- 🚧 Detailed teamwork & collaboration section to be added (drafting alongside other portfolio projects)
+
+---
+
+## 👤 Author
+
+**Park, Gunwoo (gm-15)** — Software Engineering, Sangmyung University
+Backend & Infrastructure Engineering · Team Lead, Clmakase
+- GitHub: [github.com/gm-15](https://github.com/gm-15)
+- Blog: [velog.io/@gm-15](https://velog.io/@gm-15)
+- Email: gunwoo363@gmail.com
