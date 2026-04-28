@@ -411,13 +411,6 @@ livenessProbe:
 
 ---
 
-## 🤝 Team
-
-- GitHub organization: [github.com/Cloudwave-5-CJ](https://github.com/Cloudwave-5-CJ)
-- 🚧 Detailed teamwork & collaboration section to be added (drafting alongside other portfolio projects)
-
----
-
 ## 👤 Author
 
 **Park, Gunwoo (gm-15)** — Software Engineering, Sangmyung University
