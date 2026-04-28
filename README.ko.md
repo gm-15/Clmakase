@@ -174,4 +174,3 @@ ArgoCD 감지 → EKS 롤링 배포
 **박건우 (gm-15)** — 상명대학교 소프트웨어학과
 - GitHub: [github.com/gm-15](https://github.com/gm-15)
 - Blog: [velog.io/@gm-15](https://velog.io/@gm-15)
-- 팀 GitHub: [github.com/Cloudwave-5-CJ](https://github.com/Cloudwave-5-CJ)
