@@ -4,13 +4,13 @@
 > A 150,000-VU concurrent flash-sale event system on AWS EKS, verified end-to-end via a 20-minute Datadog-measured load test.
 > Domain: `clmakase.click` · Region: `ap-northeast-2`
 
-🇰🇷 한국어 버전: [README.ko.md](README.ko.md)
+🇰🇷 한국어 버전: [README.md](README.md)
 
 ---
 
 ## ✨ At a Glance
 
-- **Production-grade modern stack on AWS EKS** — Kafka 3-Broker StatefulSet, Karpenter (all-Spot), KEDA composite scaling, ArgoCD GitOps, Istio service mesh, Terraform 16-module IaC, GitLab CI/CD 8-stage pipeline.
+- **Production-grade modern stack on AWS EKS** — Kafka 3-Broker StatefulSet, Karpenter (Spot + OnDemand allowed; 26 Spot nodes selected at the 150K-VU peak), KEDA composite scaling, ArgoCD GitOps, Istio service mesh (mTLS PERMISSIVE), Terraform 16-module IaC, GitLab CI/CD 8-stage pipeline (7 GitLab stages + ArgoCD auto-sync).
 - **150,000 VU load test passed** with 0 OOMKilled · 0 5xx errors · P99 ≤ 180 ms · 4.65 M total requests in 20 min, all on Spot instances.
 - **Backend-driven trouble-shootings**, 10 of which are documented in this README and reproducible against the codebase — most notably the **Aurora "Too many connections" formula derivation** (`maxReplicas × pool_size ≤ max_connections`) that turned scale-out itself into a DB attack surface.
 
@@ -152,7 +152,7 @@ WAF ─── ALB (api.clmakase.click)
 | **Messaging** | Kafka 3-Broker StatefulSet + Zookeeper (RF=3, `min.insync=2`, 20 partitions) |
 | **Auto-scaling** | KEDA composite trigger (Kafka lag / Datadog RPS / Cron warm-up) |
 | **GitOps** | ArgoCD + GitLab CI/CD (8-stage pipeline) |
-| **Service mesh** | Istio mTLS + Kiali |
+| **Service mesh** | Istio mTLS (PERMISSIVE stage; STRICT planned after sidecar-less services Kafka/Zookeeper verification) + Kiali |
 | **Data** | Aurora MySQL (Multi-AZ) + ElastiCache Redis |
 | **IaC** | Terraform — 16 modules |
 | **Monitoring** | Datadog APM + Prometheus (Kiali-only, 6h retention) |
@@ -177,9 +177,15 @@ total_db_connections = maxReplicas × HikariCP.pool_size
 must hold:  total_db_connections ≤ Aurora.max_connections
 ```
 
-**Resolution.** Reduced `pool_size` from 10 → 5 (so 100 × 5 = 500 ≤ Aurora's budget), enforced the formula as a pre-flight check before every scale-policy change.
+**Resolution.** Multi-step, not a single commit:
 
-This is the headline story for **why I am a backend engineer who happens to operate infrastructure, not the other way around**: the symptom appeared in EKS metrics, but the root cause was in the Spring Boot connection pool.
+1. Reduced HikariCP `pool_size` from 10 → 5.
+2. Honest recheck: with Aurora `t3.medium`'s default `max_connections ≈ 90`, `100 × 5 = 500` still exceeds the budget — the pool reduction alone does not satisfy the invariant.
+3. Tuned KEDA `minReplicas` + added a Cron warm-up trigger so the *effective* Pod count during peak windows stays well below the worst-case 100.
+4. Filed "upgrade Aurora instance class" as the next-cycle operational backlog item so the invariant can be re-satisfied at the infra layer.
+5. Standardised the formula as a pre-flight check before every scale-policy change.
+
+This is the headline story for **why I am a backend engineer who happens to operate infrastructure, not the other way around**: the symptom appeared in EKS metrics, but the root cause was in the Spring Boot connection pool, and the honest fix needed both layers.
 
 ### 2. Kafka Non-blocking Retry + DLT
 
@@ -216,7 +222,7 @@ Sale-open traffic was arriving 2 minutes faster than EKS could provision new nod
 **Resolution.**
 - **Cron-triggered warm-up.** KEDA `cron` trigger raises `minReplicaCount` to 10 starting 23:50 KST (the night before each sale).
 - **Aggressive scaleUp.** `50 pods / 30 s` policy (vs default 10 / 30 s).
-- **Karpenter consolidation.** All-Spot node pool with `consolidationPolicy: WhenUnderutilized` for cost recovery during off-peak.
+- **Karpenter consolidation.** Single NodePool allows both Spot and OnDemand (Spot was selected for all 26 peak nodes), `consolidationPolicy: WhenUnderutilized` for cost recovery during off-peak.
 
 In the final load test, scale-out completed within 60 seconds of the load arriving — verified in the Datadog evidence files.
 
@@ -402,11 +408,28 @@ livenessProbe:
 
 ---
 
-## 🚧 Roadmap
+## 🚧 Technical Debt — Designed; implementation in progress
+
+Items the project intentionally closed at "operable" rather than "complete" — left as the next-cycle backlog.
+
+- **Datadog APM completion.** KEDA triggers work, but full Micrometer 7-counter scraping via `/actuator/prometheus` openmetrics still needs to land.
+- **k6 summary preservation.** Final 150K-VU test summary was lost because `kubectl apply` ran the runner directly; next cycle preserves it as a GitLab CI artifact.
+- **Karpenter Spot Interruption Handler.** SQS `interruptionQueue` was removed; SQS-based graceful-drain flow needs reintroduction.
+- **IaC drift.** Fargate Profile and Karpenter IAM inline policy are still hand-created. To be `terraform import`-ed or modularised.
+- **Istio mTLS PERMISSIVE → STRICT.** Transition planned after sidecar-less services (Kafka, Zookeeper) are validated.
+- **Aurora `instance_class` upgrade.** Filed as the next-cycle resolution for the connection-budget invariant.
+- **ArgoCD environment split.** Currently a single `dev` environment; `stg` / `prod` split is a follow-up.
+- **Integration tests.** Current coverage is unit-only (5 files / 24 `@Test` methods). Kafka/Redis integration and concurrency tests pending.
+- **CI test gate.** `test` stage currently `allow_failure: true`; flip to `false` after integration tests land.
+
+---
+
+## 📋 Roadmap
 
 - Architecture diagram in PNG/Mermaid (replacing the ASCII version)
 - Authentication layer for the queue (HMAC-signed token instead of plain self-issued)
 - Multi-region active-active deployment plan
+- Kafka Zookeeper → KRaft migration
 - Public load-test summary post on velog.io/@gm-15
 
 ---
