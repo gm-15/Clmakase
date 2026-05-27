@@ -34,6 +34,8 @@
 
 20분 윈도우 동안 Datadog `as_rate()` 쿼리로 측정. 전체 evidence는 [evidence/load-test-2026-02-26/](evidence/load-test-2026-02-26/) 참조.
 
+![Datadog RPS over 20-minute load test](evidence/load-test-2026-02-26/datadog-rps-overview.png)
+
 | 지표 | 값 | 출처 |
 |---|---|---|
 | **Peak RPS** | **56,300 hits/s** | [Datadog 스크린샷](evidence/load-test-2026-02-26/datadog-rps-overview.png) |
@@ -57,7 +59,7 @@
 
 팀 리드로 백엔드 + 인프라 트랙을 직접 소유했습니다. 보안 정책 세부 (WAF 규칙, KMS 키 정책, Cloud Custodian forensics)는 팀원 트랙이며, 저는 Terraform 모듈 합성으로 통합만 했습니다.
 
-### Owned (면접에서 깊이 방어 가능)
+### Owned
 
 - **백엔드 (Spring Boot)**: 주문 처리 서비스, Kafka producer/consumer, `@RetryableTopic` + `@DltHandler`, **Micrometer 커스텀 카운터 7종** (stage별 retry observability).
 - **Aurora 커넥션 풀 부등식**: `maxReplicas × pool_size ≤ Aurora_max_connections` 도출, HikariCP `pool_size` 10 → 5로 축소.
@@ -272,7 +274,7 @@ Micrometer 커스텀 카운터 7종 (`order_success_total`, `order_retry_total{s
 1. **Iteration 주기 연장**: 고부하에서 서버 응답 시간이 늘면서 k6 VU iteration 주기가 ~10초에서 20초+로 연장됨. steady state에서 VU당 효과적 RPS 기여가 반으로 줄어듭니다.
 2. **사이드카 오버헤드**: 모든 요청이 Istio 사이드카를 통과하고, 프록시의 hop당 비용이 aggregate throughput을 제한합니다.
 
-**결론**: 56.3K RPS는 **error budget 소비 0**, **전량 Spot 인스턴스**에서, **KEDA + Karpenter로 부하 도달 60초 이내 대응** 상태에서 달성. 면접에서 방어할 정확한 수치는 이론값 112K가 아니라 실측 56.3K입니다.
+**결론**: 56.3K RPS는 **error budget 소비 0**, **전량 Spot 인스턴스**에서, **KEDA + Karpenter로 부하 도달 60초 이내 대응** 상태에서 달성. 이론값 112K가 아니라 실측 56.3K가 정확한 인용 수치입니다.
 
 ---
 

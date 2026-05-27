@@ -32,6 +32,8 @@ The system was designed to defend a 150,000-VU spike with zero 5xx errors, zero 
 
 Measured by Datadog `as_rate()` query over a 20-minute window — full evidence in [evidence/load-test-2026-02-26/](evidence/load-test-2026-02-26/).
 
+![Datadog RPS over 20-minute load test](evidence/load-test-2026-02-26/datadog-rps-overview.png)
+
 | Metric | Value | Source |
 |---|---|---|
 | **Peak RPS** | **56,300 hits/s** | [Datadog screenshot](evidence/load-test-2026-02-26/datadog-rps-overview.png) |
@@ -55,7 +57,7 @@ Measured by Datadog `as_rate()` query over a 20-minute window — full evidence 
 
 I led the project as the team lead and owned the backend + infrastructure tracks below. Security policy details (WAF rules, KMS key policies, Cloud Custodian forensics) were a teammate's track; I integrated their work via Terraform module composition only.
 
-### Owned (interview-defendable in depth)
+### Owned
 
 - **Backend (Spring Boot)** — order-processing service, Kafka producer/consumer, `@RetryableTopic` + `@DltHandler`, **7 custom Micrometer counters** for stage-level retry observability.
 - **The Aurora connection-pool formula** — derived `maxReplicas × pool_size ≤ Aurora_max_connections`, reduced HikariCP `pool_size` from 10 → 5 as the resolution.
@@ -267,7 +269,7 @@ The gap was not an error — it was two compounding effects:
 1. **Iteration period stretch.** Under load, server response time grew, which extended the k6 VU iteration period from ~10 s to 20 s+. Each VU's effective RPS contribution halved during the steady state.
 2. **Sidecar overhead.** Every request traverses an Istio sidecar; the proxy's per-hop cost throttled aggregate throughput.
 
-**Conclusion.** 56.3 K RPS was achieved with **zero error budget consumed**, on **all-Spot instances**, with **60-second responsiveness** to the load arrival via KEDA + Karpenter. This is the correct number to defend in interviews — not the theoretical 112 K.
+**Conclusion.** 56.3 K RPS was achieved with **zero error budget consumed**, on **all-Spot instances**, with **60-second responsiveness** to the load arrival via KEDA + Karpenter. The correct number to cite is the measured 56.3 K, not the theoretical 112 K.
 
 ---
 
