@@ -48,7 +48,7 @@
 | **서비스 중단** | **없음** | Datadog uptime |
 | **API Pod 최대** | **100** (KEDA `maxReplicas`) | k8s metrics |
 | **노드 최대** | **26** Spot 인스턴스 (~128 vCPU / ~600 GB) | Karpenter event log |
-| **브로커 장애 P95** | **3,137 ms → 436 ms (87% 개선)** | Version A vs C 비교 ([CSV](.)) |
+| **브로커 장애 P95** | **3,137 ms → 436 ms (87% 개선)** | Version A vs C 비교 (저장소 루트 `load-test-result-version-{a,c}-*.csv` 9개) |
 | **브로커 장애 시 주문 데이터 손실** | **0** (Non-blocking Retry + DLT) | Version C 불변식 |
 
 > **Datadog query**: `sum:trace.servlet.request.hits{service:oliveyoung-api}.as_rate().rollup(max, 1)`
@@ -94,7 +94,7 @@
 - **Aurora 커넥션 풀 부등식**: `maxReplicas × pool_size ≤ Aurora_max_connections` 도출, HikariCP `pool_size` 10 → 5 축소
 - **Kafka 3-Broker StatefulSet**: RF=3, `min.insync.replicas=2`, 20 partitions, Idempotent Producer, 3단계 백오프 (1s → 5s → 30s) + DLT 비차단 retry 토픽
 - **Terraform 16 모듈 IaC 아키텍처**: VPC, EKS, RDS, ElastiCache, ALB controller, ArgoCD, ECR, S3, CloudFront, ACM, Route53, security-groups, secrets, waf, kms, cli (SSM Bastion)
-- **Karpenter 마이그레이션**: Managed Node Group → Karpenter 완전 전환, 안정화 과정의 16개 연쇄 에러 해결
+- **Karpenter 마이그레이션**: Managed Node Group → Karpenter 완전 전환, 안정화 과정의 16개 연쇄 에러 해결 ([상세 ADR](docs/adr/karpenter-migration-errors.md))
 - **KEDA 복합 스케일링**: Kafka consumer-lag 트리거 + Datadog RPS 트리거 + Cron warm-up 트리거. `maxReplicas=100`, `scaleUp 50 pods / 30s` 튜닝
 - **GitLab CI/CD 8단계 파이프라인**: `test → build → trivy-scan → update-manifest → deploy-secrets → deploy-frontend → load-test → ArgoCD trigger`. commit SHA 기반 이미지 태그 재작성 (sed), `[skip ci]` 무한 루프 방지, CloudFront 캐시 자동 무효화
 - **CI DevSecOps**: Trivy CVE 스캔 통합, ECR 자동 스캔 설정, Renovate 의존성 자동 업데이트
@@ -275,7 +275,7 @@ order-events (원본)
 | P95 Latency | 3,137 ms | **436 ms (-87%)** |
 | 주문 데이터 | **유실** | **무손실** |
 
-Micrometer 커스텀 카운터 7종 (`order_success_total`, `order_retry_total{stage=0|1|2}`, `order_dlt_total`, `kafka_retry_total`, `dlt_messages_total`)이 장애 계층을 대시보드만 보고도 즉시 식별 가능하게 합니다. stage-2 spike는 인프라 장애, stage-0 spike는 일시적 네트워크 지터, 이런 식으로 구분됩니다.
+Micrometer 커스텀 카운터 7종 (`order_success_total`, `order_retry_total{stage=0|1|2}`, `order_dlt_total`, `kafka_retry_total`, `dlt_messages_total`)이 장애 계층을 대시보드에서 분리 관찰 가능하도록 설계했습니다. stage-2 spike는 인프라 장애, stage-0 spike는 일시적 네트워크 지터로 *해석할 수 있게 카운터를 계층별로 나눈 구조*입니다 (실측 단독 상승 패턴까지의 관찰 데이터는 다음 사이클 운영 백로그).
 
 <details>
 <summary>📐 Kafka Traffic Shield + Non-blocking Retry 시각 다이어그램 (펼치기)</summary>
@@ -299,7 +299,11 @@ Micrometer 커스텀 카운터 7종 (`order_success_total`, `order_retry_total{s
 
 ### 4. CI DevSecOps
 
-CI 파이프라인에 세 가지 보안 도구를 통합했습니다.
+CI 파이프라인의 시작점은 *왜 GitLab을 private subnet 안에 두고 GitOps를 단일 동기화 진실로 삼았는가*입니다.
+
+![개발계 CI/CD 설계 근거 - 소스 노출/환경 불일치 → 프라이빗 환경/상태 동기화](assets/architecture/dev-cicd-rationale.png)
+
+그 위에 보안 도구 3종을 통합했습니다.
 
 ![Trivy + ECR 자동스캔 + Renovate](assets/ci/trivy-ecr-renovate.jpg)
 
@@ -397,7 +401,7 @@ Route53이 Primary Region을 Unhealthy로 판단하면 secondary로 자동 절�
 | 1 | Kafka 브로커 장애 → P95 3,137ms | 단일 브로커 SPOF + CB → Redis fallback 지연 | 3-Broker + Non-blocking Retry + DLT | Messaging |
 | 2 | KEDA 스케일링 안 됨 | `Deployment.spec.replicas`가 HPA를 덮어씀 | `replicas` 필드 완전 제거 | K8s |
 | 3 | 세일 오픈 cold start | `minReplicas=2` 부족 | Cron 트리거 + `minReplicas=10` warm-up | KEDA |
-| 4 | EKS 노드 프로비저닝 3회 실패 | Managed Node Group 구조적 충돌 | Karpenter 마이그레이션, 16개 연쇄 에러 해결 | Infra |
+| 4 | EKS 노드 프로비저닝 3회 실패 | Managed Node Group 구조적 충돌 | Karpenter 마이그레이션, 16개 연쇄 에러 해결 ([상세 ADR](docs/adr/karpenter-migration-errors.md)) | Infra |
 | 5 | Aurora "Too many connections" | `maxReplicas × pool_size > max_connections` | 부등식 도출, pool 10 → 5 + minReplicas 조정 + 인스턴스 업그레이드 백로그 | **Backend ↔ DB** |
 | 6 | ArgoCD selfHeal이 Secret 덮어씀 | Secret을 git YAML에 정의 | Secret YAML 제거, CI 단독 주입 | GitOps |
 | 7 | ArgoCD가 새 이미지 배포 안 함 | `latest` 태그 → 매니페스트 무변경 → diff 없음 | commit SHA 태그 + `update-manifest` job | CI/CD |

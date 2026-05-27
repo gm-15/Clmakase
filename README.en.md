@@ -48,7 +48,7 @@ Measured by Datadog `as_rate()` query over a 20-minute window — full evidence 
 | **Service interruption** | **none** | Datadog uptime |
 | **Max API pods** | **100** (KEDA `maxReplicas`) | k8s metrics |
 | **Max nodes** | **26** Spot instances (~128 vCPU / ~600 GB) | Karpenter event log |
-| **Broker-failure P95** | **3,137 ms → 436 ms (87 % improvement)** | Version A vs Version C ([CSVs](.)) |
+| **Broker-failure P95** | **3,137 ms → 436 ms (87 % improvement)** | Version A vs Version C (repo root `load-test-result-version-{a,c}-*.csv`, 9 files) |
 | **Order-data loss under broker failure** | **0** (Non-blocking Retry + DLT) | Version C invariant |
 
 > **Datadog query**: `sum:trace.servlet.request.hits{service:oliveyoung-api}.as_rate().rollup(max, 1)`
@@ -94,7 +94,7 @@ During the test-operation period we tracked actual usage in AWS Cost Explorer. T
 - **The Aurora connection-pool formula** — derived `maxReplicas × pool_size ≤ Aurora_max_connections`, reduced HikariCP `pool_size` from 10 → 5 as the first step.
 - **Kafka 3-Broker StatefulSet** — RF=3, `min.insync.replicas=2`, 20 partitions, Idempotent Producer, Non-blocking Retry topic with 3-stage backoff (1 s → 5 s → 30 s) and DLT.
 - **Terraform 16-module IaC architecture** — VPC, EKS, RDS, ElastiCache, ALB controller, ArgoCD, ECR, S3, CloudFront, ACM, Route53, security-groups, secrets, waf, kms, cli (SSM Bastion).
-- **Karpenter migration** — full transition from Managed Node Group; resolved a chain of 16 cascading errors during stabilization.
+- **Karpenter migration** — full transition from Managed Node Group; resolved a chain of 16 cascading errors during stabilization ([detailed ADR](docs/adr/karpenter-migration-errors.md)).
 - **KEDA composite scaling** — Kafka consumer-lag trigger + Datadog RPS trigger + Cron warm-up trigger; tuned `maxReplicas=100` and `scaleUp 50 pods / 30 s`.
 - **GitLab CI/CD 8-step pipeline** — `test → build → trivy-scan → update-manifest → deploy-secrets → deploy-frontend → load-test → ArgoCD trigger`. commit-SHA-based image tag rewriting via `sed`, `[skip ci]` infinite-loop prevention, CloudFront cache auto-invalidation.
 - **DevSecOps in CI** — Trivy CVE scanning integration, ECR auto-scan configuration, Renovate dependency-update automation.
@@ -275,7 +275,7 @@ order-events (origin)
 | P95 latency | 3,137 ms | **436 ms (–87 %)** |
 | Order data | **lost** | **preserved** |
 
-7 Micrometer custom counters (`order_success_total`, `order_retry_total{stage=0|1|2}`, `order_dlt_total`, `kafka_retry_total`, `dlt_messages_total`) make the failure layer identifiable from the dashboard alone — a stage-2 spike means infra failure, a stage-0 spike means transient network jitter, etc.
+7 Micrometer custom counters (`order_success_total`, `order_retry_total{stage=0|1|2}`, `order_dlt_total`, `kafka_retry_total`, `dlt_messages_total`) are *designed* so each failure layer becomes separately observable on the dashboard: a stage-2 spike maps to infra failure, a stage-0 spike to transient network jitter (observed distribution under real production-like load is left as a next-cycle operational backlog item).
 
 <details>
 <summary>📐 Kafka Traffic Shield + Non-blocking Retry visual diagrams (expand)</summary>
@@ -299,7 +299,11 @@ In the final load test, scale-out completed within 60 seconds of the load arrivi
 
 ### 4. DevSecOps in CI
 
-Three security tools integrated into the CI pipeline.
+The starting point of the CI pipeline is *why GitLab sits inside a private subnet with GitOps as the single source of truth*.
+
+![Dev-side CI/CD rationale — source exposure / environment drift → private subnet / state sync](assets/architecture/dev-cicd-rationale.png)
+
+On top of that, three security tools are integrated.
 
 ![Trivy + ECR auto-scan + Renovate](assets/ci/trivy-ecr-renovate.jpg)
 
@@ -397,7 +401,7 @@ Route53 auto-fails over to secondary when Primary Region is judged Unhealthy. He
 | 1 | Kafka broker failure → P95 3,137 ms | Single-broker SPOF + CB → Redis fallback latency | 3-Broker + Non-blocking Retry + DLT | Messaging |
 | 2 | KEDA not scaling | `Deployment.spec.replicas` overrode HPA | Removed the `replicas` field entirely | K8s |
 | 3 | Sale-open cold start | `minReplicas=2` insufficient | Cron trigger + `minReplicas=10` warm-up | KEDA |
-| 4 | EKS node provisioning failed 3× | Managed Node Group structural conflict | Migrated to Karpenter; resolved 16 cascading errors | Infra |
+| 4 | EKS node provisioning failed 3× | Managed Node Group structural conflict | Migrated to Karpenter; resolved 16 cascading errors ([detailed ADR](docs/adr/karpenter-migration-errors.md)) | Infra |
 | 5 | Aurora "Too many connections" | `maxReplicas × pool_size > max_connections` | Derived formula; pool 10 → 5 + minReplicas tuning + instance-upgrade backlog | **Backend ↔ DB** |
 | 6 | ArgoCD selfHeal overwrote Secret | Secret defined inside git YAML | Removed Secret YAML; CI-only injection | GitOps |
 | 7 | ArgoCD didn't deploy new image | `latest` tag → manifest unchanged → no diff | Commit-SHA tag + `update-manifest` job | CI/CD |
